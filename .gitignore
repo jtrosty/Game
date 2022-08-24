@@ -1,6 +1,13 @@
 # Prerequisites
 *.d
 
+# ignores specfic to moving form mack and windows
+*.json
+makefile
+include/
+lib/
+game
+
 # Compiled Object files
 *.slo
 *.lo
