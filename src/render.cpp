@@ -10,7 +10,8 @@ void Render::test_DrawRectangle(GameData& gameRec) {
 }
 
 void Render::test_drawGameBoard(GameData bkgdRec[]) { 
-    for (int i = 0; i < 39; i++) {
-        test_drawGameBoard(&bkgdRec[i]);
+    for (int i = 0; i < 40; i++) {
+        //test_drawGameBoard(&(bkgdRec[0]));
+        DrawRectangle(bkgdRec[i].x, bkgdRec[i].y, bkgdRec[i].width, bkgdRec[i].height, bkgdRec[i].color);
     }
 }

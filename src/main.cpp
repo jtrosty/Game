@@ -6,8 +6,8 @@
 #define MOUSE_SCALE_MARK_SIZE 12
 
 int main(void) {
-    const int screenWidth = 800;
-    const int screenHeight = 450;
+    const int screenWidth = 900;
+    const int screenHeight = 720;
 
     Platform platform(screenWidth, screenHeight, "Trosty Games", 30);
 
@@ -20,10 +20,11 @@ int main(void) {
     
     // Game board test
     Render renderer;
-    GameData* gameBoard = new GameData[40];
+    //GameData* gameBoard = new GameData[40];
+    GameData gameBoard[40] {0};
     int startBkgd = 10;
-    int width = 15;
-    int height = 8;
+    int width = 150;
+    int height = 80;
 
     for (int i = 0; i < 40; i++) {
         gameBoard[i].x = startBkgd + width * (i % 5); 
@@ -94,6 +95,7 @@ int main(void) {
         }
         else makeCircle = false;
 
+        /*
         if (CheckCollisionPointRec(mousePosition, (Rectangle) {rec.x + rec.width - MOUSE_SCALE_MARK_SIZE, 
                                                                 rec.y + rec.height - MOUSE_SCALE_MARK_SIZE,
                                                                MOUSE_SCALE_MARK_SIZE, MOUSE_SCALE_MARK_SIZE })) {
@@ -101,6 +103,7 @@ int main(void) {
             if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) mouseScaleMode = true;
         }
         else mouseScaleReady = false;
+        */
 
         if (mouseScaleMode) {
             mouseScaleReady = true;
@@ -118,13 +121,14 @@ int main(void) {
 
             if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) mouseScaleMode = false;
         }
-        // Draw
-        // ----------------------------------------------
+
+        // Draw // ----------------------------------------------
         BeginDrawing();
 
             ClearBackground(RAYWHITE);
 
             renderer.test_drawGameBoard(gameBoard);
+            //renderer.test_DrawRectangle(gameBoard[0]);
 
             DrawCircleV(ballPosition, 40, ballColor);
             DrawRectangleRounded(rec, 0.5f, 30, Fade(GREEN, 0.5f));
@@ -135,10 +139,12 @@ int main(void) {
 
             if (mouseScaleReady) {
                 DrawRectangleLinesEx(rec, 1, RED);
+                /*
                 DrawTriangle((Vector2) { rec.x + rec.width - MOUSE_SCALE_MARK_SIZE, rec.y + rec.height},
                              (Vector2) { rec.x + rec.width, rec.y + rec.height }, 
                              (Vector2) { rec.x + rec.width, rec.y + rec. height - MOUSE_SCALE_MARK_SIZE},
                              RED);
+                             */
             }
 
             DrawText("Hello, World!", 190, 200, 20, LIGHTGRAY);
