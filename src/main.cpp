@@ -1,5 +1,7 @@
+#pragma once
 #include "Platform.h"
 #include "../include/raylib.h"
+#include "render.h"
 
 #define MOUSE_SCALE_MARK_SIZE 12
 
@@ -12,8 +14,57 @@ int main(void) {
     Vector2 ballPosition = { 100.0f, 100.0f };
     Color ballColor = DARKBLUE;
 
-    Rectangle rec = {100, 100, 200, 80};
+    Rectangle rec = {200, 200, 200, 80};
     Vector2 mousePosition = { 0 };
+    
+    
+    // Game board test
+    Render renderer;
+    GameData* gameBoard = new GameData[40];
+    int startBkgd = 10;
+    int width = 15;
+    int height = 8;
+
+    for (int i = 0; i < 40; i++) {
+        gameBoard[i].x = startBkgd + width * (i % 5); 
+        gameBoard[i].y = startBkgd + height * (i / 5); 
+        gameBoard[i].width = width;
+        gameBoard[i].height = height;
+        switch (i / 5) 
+        {
+        case 0:
+            gameBoard[i].color = BLUE;
+            break;
+        case 1:
+            gameBoard[i].color = GREEN;
+            break;
+        case 2:
+            gameBoard[i].color = SKYBLUE;
+            break;
+        case 3:
+            gameBoard[i].color = LIGHTGRAY;
+            break;
+        case 4:
+            gameBoard[i].color = BEIGE;
+            break;
+        case 5:
+            gameBoard[i].color = BROWN;
+            break;
+        case 6:
+            gameBoard[i].color = ORANGE;
+            break;
+        case 7:
+            gameBoard[i].color = RED;
+            break;
+        case 8:
+            gameBoard[i].color = BLUE;
+            break;
+        default:
+            break;
+        }
+    }
+
+
 
     bool mouseScaleReady = false;
     bool mouseScaleMode = false;
@@ -72,6 +123,8 @@ int main(void) {
         BeginDrawing();
 
             ClearBackground(RAYWHITE);
+
+            renderer.test_drawGameBoard(gameBoard);
 
             DrawCircleV(ballPosition, 40, ballColor);
             DrawRectangleRounded(rec, 0.5f, 30, Fade(GREEN, 0.5f));
