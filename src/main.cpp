@@ -1,4 +1,4 @@
-#pragma once
+//#pragma once
 #include "Platform.h"
 #include "../include/raylib.h"
 #include "render.h"
@@ -21,17 +21,19 @@ int main(void) {
     // Game board test
     Render renderer;
     //GameData* gameBoard = new GameData[40];
-    GameData gameBoard[40] {0};
+    GameData gameBoard[40];
     int startBkgd = 10;
     int width = 150;
     int height = 80;
+    int rows = 8;
+    int cols = 5;
 
-    for (int i = 0; i < 40; i++) {
-        gameBoard[i].x = startBkgd + width * (i % 5); 
-        gameBoard[i].y = startBkgd + height * (i / 5); 
+    for (int i = 0; i < (cols * rows); i++) {
+        gameBoard[i].x = startBkgd + width * (i % cols); 
+        gameBoard[i].y = startBkgd + height * (i / cols); 
         gameBoard[i].width = width;
         gameBoard[i].height = height;
-        switch (i / 5) 
+        switch (i / cols) 
         {
         case 0:
             gameBoard[i].color = BLUE;
@@ -57,7 +59,7 @@ int main(void) {
         case 7:
             gameBoard[i].color = RED;
             break;
-        case 8:
+        case 8: 
             gameBoard[i].color = BLUE;
             break;
         default:
@@ -127,7 +129,7 @@ int main(void) {
 
             ClearBackground(RAYWHITE);
 
-            renderer.test_drawGameBoard(gameBoard);
+            renderer.test_drawGameBoard(gameBoard, width, height, rows, cols);
             //renderer.test_DrawRectangle(gameBoard[0]);
 
             DrawCircleV(ballPosition, 40, ballColor);
