@@ -129,7 +129,7 @@ int main(void) {
 
             ClearBackground(RAYWHITE);
 
-            renderer.test_drawGameBoard(gameBoard, width, height, rows, cols);
+            renderer.test_drawGameBoard(gameBoard, width, height, rows, cols, startBkgd);
             //renderer.test_DrawRectangle(gameBoard[0]);
 
             DrawCircleV(ballPosition, 40, ballColor);
