@@ -6,8 +6,8 @@
 #define MOUSE_SCALE_MARK_SIZE 12
 
 int main(void) {
-    const int screenWidth = 900;
-    const int screenHeight = 720;
+    const int screenWidth = 1800;
+    const int screenHeight = 1440;
 
     Platform platform(screenWidth, screenHeight, "Trosty Games", 30);
 
@@ -21,10 +21,10 @@ int main(void) {
     // Game board test
     Render renderer;
     //GameData* gameBoard = new GameData[40];
-    GameData gameBoard[40] {0};
+    BoardGameData gameBoard[40] {0};
     int startBkgd = 10;
-    int width = 150;
-    int height = 80;
+    int width = 210;
+    int height = 150;
 
     for (int i = 0; i < 40; i++) {
         gameBoard[i].x = startBkgd + width * (i % 5); 
@@ -64,6 +64,11 @@ int main(void) {
             break;
         }
     }
+
+
+    // #################################################### Load file
+    Image hobgoblinImage = LoadImage("../data/art/hobgoblin_infantry.png");
+    Texture2D hobgoblinTex = LoadTextureFromImage(hobgoblinImage);
 
 
 
@@ -127,9 +132,11 @@ int main(void) {
 
             ClearBackground(RAYWHITE);
 
+            //TODO: Take this out to a just a draw function thatwill control background and player.  
             renderer.test_drawGameBoard(gameBoard);
-            //renderer.test_DrawRectangle(gameBoard[0]);
 
+
+            // ##################################################### Draw Circle
             DrawCircleV(ballPosition, 40, ballColor);
             DrawRectangleRounded(rec, 0.5f, 30, Fade(GREEN, 0.5f));
 
@@ -149,9 +156,15 @@ int main(void) {
 
             DrawText("Hello, World!", 190, 200, 20, LIGHTGRAY);
 
+            // ########################### Test Code
+            DrawTexture(hobgoblinTex, 10, 10, WHITE);
+
+
         EndDrawing();
         // ----------------------------------------------
     }
+    // ###################### De-Initialization
+    UnloadTexture(hobgoblinTex);  
 
     CloseWindow();
 

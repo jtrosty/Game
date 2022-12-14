@@ -39,3 +39,8 @@ build/
 *.exe
 *.out
 *.app
+
+
+# art
+*.png
+*.xcf

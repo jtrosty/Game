@@ -10,7 +10,7 @@ class Render {
 
     // test Code
     //------------------------------
-    void test_DrawRectangle(GameData& gameRec);
-    void test_drawGameBoard(GameData bkgdRec[]);
+    void test_DrawRectangle(BoardGameData& gameRec);
+    void test_drawGameBoard(BoardGameData bkgdRec[]);
 
 };
