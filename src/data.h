@@ -1,13 +1,20 @@
 #include "../include/raylib.h"
 
-struct BoardGameData {
+struct Tile {
     int x;
     int y;
-    int width;
-    int height;
     Color color;
+    char hasUnit;
 };
 
+struct BoardData{
+    unsigned char numRows;
+    unsigned char numCols;
+    int offset;
+    int pixelWidth;
+    int pixelHeight;
+    Tile* tiles;
+};
 
 struct UnitData {
     unsigned char row;

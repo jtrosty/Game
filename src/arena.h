@@ -2,9 +2,6 @@
 #include <cstring>
 #include <cassert>
 
-#ifndef DEFAULT_ALIGNMENT
-#define DEFAULT_ALIGNMENT (2 * sizeof(void*));
-#endif
 
 struct JT_Arena {
     unsigned char* buffer;
@@ -102,6 +99,11 @@ void* JT_linearArenaResizeAlign(JT_Arena* arena, void* oldMemory, size_t oldSize
 void JT_arenaFree(JT_Arena* arena, void* ptr) {
     // Do nothing
 }
+
+#ifndef DEFAULT_ALIGNMENT
+#define DEFAULT_ALIGNMENT (2 * sizeof(void*));
+#endif
+
 void* JT_arenaResize(JT_Arena* a, void* oldMemory, size_t oldSize, size_t newSize) {
     return JT_linearArenaResizeAlign(a, oldMemory, newSize, DEFAULT_ALIGNMENT);
 }

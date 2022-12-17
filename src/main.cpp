@@ -1,4 +1,4 @@
-#pragma once
+//#pragma once
 #include "Platform.h"
 #include "../include/raylib.h"
 #include "render.h"
@@ -24,50 +24,53 @@ int main(void) {
     
     // Game Data:
     // Game board test
-    //GameData* gameBoard = new GameData[40];
-    BoardGameData gameBoard[BOARD_HEIGTH * BOARD_WIDTH] {0};
+    //GameData* board = new GameData[40];
+    BoardData board[BOARD_HEIGTH * BOARD_WIDTH] {0};
+    Tile tiles[BOARD_HEIGTH * BOARD_WIDTH] {0};
+    board->tiles = tiles;
+    board->numRows = 8;
+    board->numCols = 5;
+    board->offset = 10;
+    board->pixelHeight = 80;
+    board->pixelWidth = 150;
+
     UnitData heroUnits[(BOARD_HEIGTH * BOARD_WIDTH) / 2] {0};
     UnitData villian[(BOARD_HEIGTH * BOARD_WIDTH) / 2] {0};
 
-
     // Initialize the Board Data
     const int startBkgd = 10;
-    const int width = 210;
-    const int height = 150;
 
-    for (int i = 0; i < 40; i++) {
-        gameBoard[i].x = startBkgd + width * (i % 5); 
-        gameBoard[i].y = startBkgd + height * (i / 5); 
-        gameBoard[i].width = width;
-        gameBoard[i].height = height;
-        switch (i / 5) 
+    for (int i = 0; i < (board->numCols * board->numRows); i++) {
+        board->tiles[i].x = startBkgd + board->pixelWidth * (i % board->numCols); 
+        board->tiles[i].y = startBkgd + board->pixelHeight * (i / board->numCols); 
+        switch (i / board->numCols) 
         {
         case 0:
-            gameBoard[i].color = BLUE;
+            board->tiles[i].color = BLUE;
             break;
         case 1:
-            gameBoard[i].color = GREEN;
+            board->tiles[i].color = GREEN;
             break;
         case 2:
-            gameBoard[i].color = SKYBLUE;
+            board->tiles[i].color = SKYBLUE;
             break;
         case 3:
-            gameBoard[i].color = LIGHTGRAY;
+            board->tiles[i].color = LIGHTGRAY;
             break;
         case 4:
-            gameBoard[i].color = BEIGE;
+            board->tiles[i].color = BEIGE;
             break;
         case 5:
-            gameBoard[i].color = BROWN;
+            board->tiles[i].color = BROWN;
             break;
         case 6:
-            gameBoard[i].color = ORANGE;
+            board->tiles[i].color = ORANGE;
             break;
         case 7:
-            gameBoard[i].color = RED;
+            board->tiles[i].color = RED;
             break;
-        case 8:
-            gameBoard[i].color = BLUE;
+        case 8: 
+            board->tiles[i].color = BLUE;
             break;
         default:
             break;
@@ -141,8 +144,8 @@ int main(void) {
 
             ClearBackground(RAYWHITE);
 
-            //TODO: Take this out to a just a draw function thatwill control background and player.  
-            renderer.test_drawGameBoard(gameBoard);
+            renderer.test_drawGameBoard(*board);
+            //renderer.test_DrawRectangle(board[0]);
 
 
             // ##################################################### Draw Circle
