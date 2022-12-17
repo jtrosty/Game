@@ -95,6 +95,8 @@ int main(void) {
             break;
         }
     }
+    board->tiles[40].hasUnit = 1;
+    board->tiles[40].unit = &drowInf;
 
 
     // #################################################### Load file
