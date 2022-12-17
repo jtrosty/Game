@@ -25,14 +25,14 @@ int main(void) {
     // Game Data:
     // Game board test
     //GameData* board = new GameData[40];
-    BoardData board[BOARD_HEIGTH * BOARD_WIDTH] {0};
+    BoardData board {0};
     Tile tiles[BOARD_HEIGTH * BOARD_WIDTH] {0};
-    board->tiles = tiles;
-    board->numRows = 8;
-    board->numCols = 5;
-    board->offset = 10;
-    board->pixelHeight = 80;
-    board->pixelWidth = 150;
+    board.tiles = tiles;
+    board.numRows = 8;
+    board.numCols = 5;
+    board.offset = 10;
+    board.pixelHeight = 80;
+    board.pixelWidth = 150;
 
     UnitData heroUnits[(BOARD_HEIGTH * BOARD_WIDTH) / 2] {0};
     UnitData villian[(BOARD_HEIGTH * BOARD_WIDTH) / 2] {0};
@@ -55,48 +55,48 @@ int main(void) {
     // Initialize the Board Data
     const int startBkgd = 10;
 
-    for (int i = 0; i < (board->numCols * board->numRows); i++) {
-        board->tiles[i].rec.x = startBkgd + board->pixelWidth * (i % board->numCols); 
-        board->tiles[i].rec.y = startBkgd + board->pixelHeight * (i / board->numCols); 
-        board->tiles[i].rec.width = board->pixelWidth;
-        board->tiles[i].rec.height = board->pixelHeight;
-        board->tiles[i].hasUnit = 0;
+    for (int i = 0; i < (board.numCols * board.numRows); i++) {
+        board.tiles[i].rec.x = startBkgd + board.pixelWidth * (i % board.numCols); 
+        board.tiles[i].rec.y = startBkgd + board.pixelHeight * (i / board.numCols); 
+        board.tiles[i].rec.width = board.pixelWidth;
+        board.tiles[i].rec.height = board.pixelHeight;
+        board.tiles[i].hasUnit = 0;
 
-        switch (i / board->numCols) 
+        switch (i / board.numCols) 
         {
         case 0:
-            board->tiles[i].color = BLUE;
+            board.tiles[i].color = BLUE;
             break;
         case 1:
-            board->tiles[i].color = GREEN;
+            board.tiles[i].color = GREEN;
             break;
         case 2:
-            board->tiles[i].color = SKYBLUE;
+            board.tiles[i].color = SKYBLUE;
             break;
         case 3:
-            board->tiles[i].color = LIGHTGRAY;
+            board.tiles[i].color = LIGHTGRAY;
             break;
         case 4:
-            board->tiles[i].color = BEIGE;
+            board.tiles[i].color = BEIGE;
             break;
         case 5:
-            board->tiles[i].color = BROWN;
+            board.tiles[i].color = BROWN;
             break;
         case 6:
-            board->tiles[i].color = ORANGE;
+            board.tiles[i].color = ORANGE;
             break;
         case 7:
-            board->tiles[i].color = RED;
+            board.tiles[i].color = RED;
             break;
         case 8: 
-            board->tiles[i].color = BLUE;
+            board.tiles[i].color = BLUE;
             break;
         default:
             break;
         }
     }
-    board->tiles[40].hasUnit = 1;
-    board->tiles[40].unit = &drowInf;
+    board.tiles[20].hasUnit = 1;
+    board.tiles[20].unit = &drowInf;
 
 
     // #################################################### Load file
@@ -165,7 +165,12 @@ int main(void) {
 
             ClearBackground(RAYWHITE);
 
-            renderer.test_drawGameBoard(*board);
+            renderer.test_drawGameBoard(board);
+            for (int i = 0; i < BOARD_WIDTH * BOARD_HEIGTH; i++) {
+                if (board.tiles[i].hasUnit) {
+                    renderer.drawUnitCard(board.tiles[i]);
+                }
+            }
             //renderer.test_DrawRectangle(board[0]);
 
 

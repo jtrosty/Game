@@ -15,6 +15,7 @@ class Render {
     //void test_DrawRectangle(BoardGameData& gameRec);
     void test_drawGameBoard(BoardData& board);
     void drawGameBoard(BoardData& board);
+    void drawUnitCard(Tile& tile);
     void drawUnitCard(UnitData& card, Tile& tile);
 
 };

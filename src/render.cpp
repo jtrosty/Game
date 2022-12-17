@@ -25,6 +25,11 @@ void Render::test_drawGameBoard(BoardData& board) {
     }
 }
 
+void Render::drawUnitCard(Tile& tile) {
+    assert(tile.hasUnit == 1);
+    DrawRectangleRoundedLines(tile.rec, 5.0, 2, 2.0, BLACK);
+}
+
 void Render::drawUnitCard(UnitData& card, Tile& tile) {
 
     assert(tile.hasUnit == 1);

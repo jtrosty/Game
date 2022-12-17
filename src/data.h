@@ -23,7 +23,6 @@ struct Tile {
     Color color;
     char hasUnit;
     UnitData* unit;
-
 };
 
 struct BoardData{
