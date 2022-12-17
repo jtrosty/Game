@@ -37,12 +37,31 @@ int main(void) {
     UnitData heroUnits[(BOARD_HEIGTH * BOARD_WIDTH) / 2] {0};
     UnitData villian[(BOARD_HEIGTH * BOARD_WIDTH) / 2] {0};
 
+    UnitData drowInf;
+    drowInf.row = MAX_CHAR;
+    drowInf.col = MAX_CHAR;
+    drowInf.title = "Drow Infantry";
+    drowInf.commander = "Jon";
+    drowInf.tier = 2;
+    drowInf.dmg = 1;
+    drowInf.size = 6;
+    drowInf.atk = 4;
+    drowInf.def = 12;
+    drowInf.pow = 3;
+    drowInf.toughness = 13;
+    drowInf.morale = 1;
+    drowInf.communicaiton = 2;
+
     // Initialize the Board Data
     const int startBkgd = 10;
 
     for (int i = 0; i < (board->numCols * board->numRows); i++) {
-        board->tiles[i].x = startBkgd + board->pixelWidth * (i % board->numCols); 
-        board->tiles[i].y = startBkgd + board->pixelHeight * (i / board->numCols); 
+        board->tiles[i].rec.x = startBkgd + board->pixelWidth * (i % board->numCols); 
+        board->tiles[i].rec.y = startBkgd + board->pixelHeight * (i / board->numCols); 
+        board->tiles[i].rec.width = board->pixelWidth;
+        board->tiles[i].rec.height = board->pixelHeight;
+        board->tiles[i].hasUnit = 0;
+
         switch (i / board->numCols) 
         {
         case 0:

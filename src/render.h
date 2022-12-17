@@ -1,6 +1,8 @@
 #pragma once
+#include <cassert>
 #include "../include/raylib.h"
 #include "data.h"
+
 
 class Render {
 
@@ -12,5 +14,7 @@ class Render {
     //------------------------------
     //void test_DrawRectangle(BoardGameData& gameRec);
     void test_drawGameBoard(BoardData& board);
+    void drawGameBoard(BoardData& board);
+    void drawUnitCard(UnitData& card, Tile& tile);
 
 };

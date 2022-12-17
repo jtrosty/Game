@@ -1,8 +1,8 @@
 #include "../include/raylib.h"
+const char MAX_CHAR = 255;
 
 struct Tile {
-    int x;
-    int y;
+    Rectangle rec;
     Color color;
     char hasUnit;
 };
@@ -19,16 +19,17 @@ struct BoardData{
 struct UnitData {
     unsigned char row;
     unsigned char col;
-    char title[20];
-    char commander[20];
+    char* title;
+    char* commander;
     unsigned char tier;
     unsigned char dmg;
     unsigned char size;
     unsigned char atk;
+    unsigned char def;
     unsigned char pow;
     unsigned char toughness;
     unsigned char morale;
     unsigned char communicaiton;
-    unsigned char traits[5];
+    unsigned char traits[5]{0};
 };
 
