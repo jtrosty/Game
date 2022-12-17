@@ -14,4 +14,5 @@ void Render::test_drawGameBoard(BoardGameData bkgdRec[]) {
         //test_drawGameBoard(&(bkgdRec[0]));
         DrawRectangle(bkgdRec[i].x, bkgdRec[i].y, bkgdRec[i].width, bkgdRec[i].height, bkgdRec[i].color);
     }
+    // Draw lines
 }

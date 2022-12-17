@@ -38,7 +38,7 @@ uintptr_t JT_alignForward(uintptr_t ptr, size_t align) {
     return p;
 }
 
-void* JT_areanaAlloc(JT_Arena* arena, size_t size) {
+void* JT_linearArenaAlloc(JT_Arena* arena, size_t size) {
     void* result = NULL;
     // Check space and allocate
     if (arena->bufferSize > (arena->currentOffset + size)) {
@@ -51,7 +51,7 @@ void* JT_areanaAlloc(JT_Arena* arena, size_t size) {
     return result;
 }
 
-void* JT_areanaAllocAlign(JT_Arena* arena, size_t size, size_t align) {
+void* JT_linearArenaAllocAlign(JT_Arena* arena, size_t size, size_t align) {
     void* result = NULL;
     // Align the offest
     uintptr_t ptr = (uintptr_t)arena->buffer + (uintptr_t)arena->currentOffset;
@@ -70,13 +70,13 @@ void* JT_areanaAllocAlign(JT_Arena* arena, size_t size, size_t align) {
     return result;
 }
 
-void* JT_arenaResizeAlign(JT_Arena* arena, void* oldMemory, size_t oldSize, size_t newSize, size_t align) {
+void* JT_linearArenaResizeAlign(JT_Arena* arena, void* oldMemory, size_t oldSize, size_t newSize, size_t align) {
     unsigned char* oldMem = (unsigned char*)oldMemory;
     assert(JT_isPowerOfTwo(align));
     void* result = NULL;
 
     if(oldMem == NULL || oldSize == 0) {
-        result = JT_areanaAllocAlign(arena, newSize, align);
+        result = JT_linearArenaAllocAlign(arena, newSize, align);
     }
     else if ((arena->buffer >= oldMem) && (oldMem < (arena->buffer + arena->bufferSize))) {
         if (arena->buffer + arena->previousOffset == oldMem) {
@@ -87,7 +87,7 @@ void* JT_arenaResizeAlign(JT_Arena* arena, void* oldMemory, size_t oldSize, size
             result = oldMemory;
         } 
         else {
-            void* newMemory = JT_areanaAllocAlign(arena, newSize, align);
+            void* newMemory = JT_linearArenaAllocAlign(arena, newSize, align);
             size_t copySize = oldSize < newSize ? oldSize : newSize;
             memmove(newMemory, oldMemory, copySize);
             result = newMemory;
@@ -103,14 +103,10 @@ void JT_arenaFree(JT_Arena* arena, void* ptr) {
     // Do nothing
 }
 void* JT_arenaResize(JT_Arena* a, void* oldMemory, size_t oldSize, size_t newSize) {
-    return JT_arenaResizeAlign(a, oldMemory, newSize, DEFAULT_ALIGNMENT);
+    return JT_linearArenaResizeAlign(a, oldMemory, newSize, DEFAULT_ALIGNMENT);
 }
 
 void* JT_arenaFreeAll(JT_Arena* a) {
     a->currentOffset = 0;
     a->previousOffset = 0;
 }
-
-
-
-

@@ -4,12 +4,16 @@
 #include "render.h"
 
 #define MOUSE_SCALE_MARK_SIZE 12
+#define BOARD_WIDTH 5
+#define BOARD_HEIGTH 5
+
 
 int main(void) {
     const int screenWidth = 1800;
     const int screenHeight = 1440;
 
     Platform platform(screenWidth, screenHeight, "Trosty Games", 30);
+    Render renderer;
 
     Vector2 ballPosition = { 100.0f, 100.0f };
     Color ballColor = DARKBLUE;
@@ -18,13 +22,18 @@ int main(void) {
     Vector2 mousePosition = { 0 };
     
     
+    // Game Data:
     // Game board test
-    Render renderer;
     //GameData* gameBoard = new GameData[40];
-    BoardGameData gameBoard[40] {0};
-    int startBkgd = 10;
-    int width = 210;
-    int height = 150;
+    BoardGameData gameBoard[BOARD_HEIGTH * BOARD_WIDTH] {0};
+    UnitData heroUnits[(BOARD_HEIGTH * BOARD_WIDTH) / 2] {0};
+    UnitData villian[(BOARD_HEIGTH * BOARD_WIDTH) / 2] {0};
+
+
+    // Initialize the Board Data
+    const int startBkgd = 10;
+    const int width = 210;
+    const int height = 150;
 
     for (int i = 0; i < 40; i++) {
         gameBoard[i].x = startBkgd + width * (i % 5); 
