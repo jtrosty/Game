@@ -26,8 +26,11 @@ void Render::test_drawGameBoard(BoardData& board) {
 }
 
 void Render::drawUnitCard(Tile& tile) {
+    int offset = 10;
     assert(tile.hasUnit == 1);
-    DrawRectangleRoundedLines(tile.rec, 5.0, 2, 2.0, BLACK);
+    UnitData u = *(tile.unit);
+    DrawRectangleRoundedLines(tile.rec, 2.0, 2, 2.0, BLACK);
+    DrawText(u.title, tile.rec.x + offset, tile.rec.y, 5, BLACK);
 }
 
 void Render::drawUnitCard(UnitData& card, Tile& tile) {
@@ -35,4 +38,47 @@ void Render::drawUnitCard(UnitData& card, Tile& tile) {
     assert(tile.hasUnit == 1);
     DrawRectangleRoundedLines(tile.rec, 5.0, 2, 2.0, BLACK);
 
+}
+
+void Render::resetPlayArea(BoardData& board) {
+    for (int i = 0; i < (board.numCols * board.numRows); i++) {
+        board.tiles[i].rec.x = board.offset + board.pixelWidth * (i % board.numCols); 
+        board.tiles[i].rec.y = board.offset + board.pixelHeight * (i / board.numCols); 
+        board.tiles[i].rec.width = board.pixelWidth;
+        board.tiles[i].rec.height = board.pixelHeight;
+        board.tiles[i].hasUnit = 0;
+
+        switch (i / board.numCols) 
+        {
+        case 0:
+            board.tiles[i].color = BLUE;
+            break;
+        case 1:
+            board.tiles[i].color = GREEN;
+            break;
+        case 2:
+            board.tiles[i].color = SKYBLUE;
+            break;
+        case 3:
+            board.tiles[i].color = LIGHTGRAY;
+            break;
+        case 4:
+            board.tiles[i].color = BEIGE;
+            break;
+        case 5:
+            board.tiles[i].color = BROWN;
+            break;
+        case 6:
+            board.tiles[i].color = ORANGE;
+            break;
+        case 7:
+            board.tiles[i].color = RED;
+            break;
+        case 8: 
+            board.tiles[i].color = BLUE;
+            break;
+        default:
+            break;
+        }
+    }
 }

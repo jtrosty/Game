@@ -53,48 +53,9 @@ int main(void) {
     drowInf.communicaiton = 2;
 
     // Initialize the Board Data
-    const int startBkgd = 10;
+    renderer.resetPlayArea(board);
 
-    for (int i = 0; i < (board.numCols * board.numRows); i++) {
-        board.tiles[i].rec.x = startBkgd + board.pixelWidth * (i % board.numCols); 
-        board.tiles[i].rec.y = startBkgd + board.pixelHeight * (i / board.numCols); 
-        board.tiles[i].rec.width = board.pixelWidth;
-        board.tiles[i].rec.height = board.pixelHeight;
-        board.tiles[i].hasUnit = 0;
-
-        switch (i / board.numCols) 
-        {
-        case 0:
-            board.tiles[i].color = BLUE;
-            break;
-        case 1:
-            board.tiles[i].color = GREEN;
-            break;
-        case 2:
-            board.tiles[i].color = SKYBLUE;
-            break;
-        case 3:
-            board.tiles[i].color = LIGHTGRAY;
-            break;
-        case 4:
-            board.tiles[i].color = BEIGE;
-            break;
-        case 5:
-            board.tiles[i].color = BROWN;
-            break;
-        case 6:
-            board.tiles[i].color = ORANGE;
-            break;
-        case 7:
-            board.tiles[i].color = RED;
-            break;
-        case 8: 
-            board.tiles[i].color = BLUE;
-            break;
-        default:
-            break;
-        }
-    }
+    //DEBUG: Test code.
     board.tiles[20].hasUnit = 1;
     board.tiles[20].unit = &drowInf;
 
@@ -102,8 +63,6 @@ int main(void) {
     // #################################################### Load file
     Image hobgoblinImage = LoadImage("../data/art/hobgoblin_infantry.png");
     Texture2D hobgoblinTex = LoadTextureFromImage(hobgoblinImage);
-
-
 
     bool mouseScaleReady = false;
     bool mouseScaleMode = false;

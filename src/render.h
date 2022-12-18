@@ -17,5 +17,6 @@ class Render {
     void drawGameBoard(BoardData& board);
     void drawUnitCard(Tile& tile);
     void drawUnitCard(UnitData& card, Tile& tile);
+    void resetPlayArea(BoardData& board);
 
 };
