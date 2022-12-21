@@ -26,18 +26,26 @@ void Render::test_drawGameBoard(BoardData& board) {
 }
 
 void Render::drawUnitCard(Tile& tile) {
-    int offset = 10;
+    int offset = 30;
     assert(tile.hasUnit == 1);
     UnitData u = *(tile.unit);
     DrawRectangleRoundedLines(tile.rec, 2.0, 2, 2.0, BLACK);
-    DrawText(u.title, tile.rec.x + offset, tile.rec.y, 5, BLACK);
+    DrawText(u.title,           tile.rec.x + offset,    tile.rec.y, 5, BLACK);
+    DrawText(u.commander,       tile.rec.x + offset,    tile.rec.y + 10, 5, BLACK);
+    // TODO: Need to change the ints to const char*
+    /*
+    DrawText(u.atk,             tile.rec.x + 5,         tile.rec.y + 20, 5, BLACK);
+    DrawText(u.def,             tile.rec.x + 5,         tile.rec.y + 20, 5, BLACK);
+    DrawText(u.pow,             tile.rec.x + 5,         tile.rec.y + 20, 5, BLACK);
+    DrawText(u.toughness,       tile.rec.x + 5,         tile.rec.y + 20, 5, BLACK);
+    DrawText(u.morale,          tile.rec.x + 5,         tile.rec.y + 20, 5, BLACK);
+    DrawText(u.communicaiton,   tile.rec.x + 5,         tile.rec.y + 20, 5, BLACK);
+    */
 }
 
 void Render::drawUnitCard(UnitData& card, Tile& tile) {
-
     assert(tile.hasUnit == 1);
     DrawRectangleRoundedLines(tile.rec, 5.0, 2, 2.0, BLACK);
-
 }
 
 void Render::resetPlayArea(BoardData& board) {

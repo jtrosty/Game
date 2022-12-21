@@ -3,39 +3,45 @@
 #include "../include/raylib.h"
 #include "render.h"
 
+#define SCREEN_WIDTH 800
+#define SCREEN_HEIGHT 600
+
 #define MOUSE_SCALE_MARK_SIZE 12
 #define BOARD_WIDTH 5
-#define BOARD_HEIGTH 5
+#define BOARD_HEIGHT 8 
 
 
 int main(void) {
-    const int screenWidth = 1800;
-    const int screenHeight = 1440;
+    const int screenWidth = SCREEN_WIDTH;
+    const int screenHeight = SCREEN_HEIGHT;
+    int border = 100;
+    int numOfTiles = BOARD_HEIGHT * BOARD_WIDTH;
 
     Platform platform(screenWidth, screenHeight, "Trosty Games", 30);
     Render renderer;
 
+    //TODO: Deletet when done with testing
     Vector2 ballPosition = { 100.0f, 100.0f };
     Color ballColor = DARKBLUE;
 
     Rectangle rec = {200, 200, 200, 80};
     Vector2 mousePosition = { 0 };
-    
+    //////////////////////
     
     // Game Data:
     // Game board test
     //GameData* board = new GameData[40];
     BoardData board {0};
-    Tile tiles[BOARD_HEIGTH * BOARD_WIDTH] {0};
+    Tile tiles[BOARD_HEIGHT * BOARD_WIDTH] {0};
     board.tiles = tiles;
     board.numRows = 8;
     board.numCols = 5;
-    board.offset = 10;
-    board.pixelHeight = 80;
-    board.pixelWidth = 150;
+    board.offset = border / 2;
+    board.pixelHeight = (screenHeight - border) / board.numRows;
+    board.pixelWidth = (screenWidth - border) / board.numCols;
 
-    UnitData heroUnits[(BOARD_HEIGTH * BOARD_WIDTH) / 2] {0};
-    UnitData villian[(BOARD_HEIGTH * BOARD_WIDTH) / 2] {0};
+    UnitData heroUnits[(BOARD_HEIGHT * BOARD_WIDTH) / 2] {0};
+    UnitData villian[(BOARD_HEIGHT * BOARD_WIDTH) / 2] {0};
 
     UnitData drowInf;
     drowInf.row = MAX_CHAR;
@@ -86,6 +92,13 @@ int main(void) {
         
         // ----------------------------------------------
         mousePosition = GetMousePosition();
+        for (int i = 0; i < numOfTiles; i++) {
+            if (!board.tiles->hasUnit) {
+            }
+            else (CheckCollisionPointRec(mousePosition, board.tiles[i].rec) && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+
+            }
+        }
 
         if (CheckCollisionPointRec(mousePosition, rec) && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
             makeCircle = true;
