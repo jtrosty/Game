@@ -27,20 +27,27 @@ void Render::test_drawGameBoard(BoardData& board) {
 
 void Render::drawUnitCard(Tile& tile) {
     int offset = 30;
+    int spacing = 20;
     assert(tile.hasUnit == 1);
     UnitData u = *(tile.unit);
     DrawRectangleRoundedLines(tile.rec, 2.0, 2, 2.0, BLACK);
-    DrawText(u.title,           tile.rec.x + offset,    tile.rec.y, 5, BLACK);
-    DrawText(u.commander,       tile.rec.x + offset,    tile.rec.y + 10, 5, BLACK);
-    // TODO: Need to change the ints to const char*
-    /*
-    DrawText(u.atk,             tile.rec.x + 5,         tile.rec.y + 20, 5, BLACK);
+    int xPos = tile.rec.x + offset;
+    int yPos =  tile.rec.y;
+    DrawText(u.title,           xPos,    yPos, 5, BLACK);
+    xPos += offset;
+    yPos += spacing;
+    DrawText(u.commander,       xPos,    yPos, 5, BLACK);
+    DrawText("SIZE: ",          xPos + offset + (tile.rec.width / 2),    tile.rec.y + 5, 5, BLACK);
+    DrawText(u.size,            tile.rec.x + offset + (tile.rec.width / 2) + offset,    tile.rec.y + 5, 5, BLACK);
+    DrawText("ATK: ",           tile.rec.x + offset,    tile.rec.y + 20, 5, BLACK);
+    DrawText(u.atk,             tile.rec.x + offset + 20,    tile.rec.y + 20, 5, BLACK);
+    DrawText("DEF: ",           tile.rec.x + (offset << 1),    tile.rec.y + 20, 5, BLACK);
+    DrawText(u.def,             tile.rec.x + (offset << 1) + 20,    tile.rec.y + 20, 5, BLACK);
     DrawText(u.def,             tile.rec.x + 5,         tile.rec.y + 20, 5, BLACK);
     DrawText(u.pow,             tile.rec.x + 5,         tile.rec.y + 20, 5, BLACK);
     DrawText(u.toughness,       tile.rec.x + 5,         tile.rec.y + 20, 5, BLACK);
     DrawText(u.morale,          tile.rec.x + 5,         tile.rec.y + 20, 5, BLACK);
     DrawText(u.communicaiton,   tile.rec.x + 5,         tile.rec.y + 20, 5, BLACK);
-    */
 }
 
 void Render::drawUnitCard(UnitData& card, Tile& tile) {

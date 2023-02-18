@@ -3,8 +3,8 @@
 #include "../include/raylib.h"
 #include "render.h"
 
-#define SCREEN_WIDTH 800
-#define SCREEN_HEIGHT 600
+#define SCREEN_WIDTH 1200
+#define SCREEN_HEIGHT 800
 
 #define MOUSE_SCALE_MARK_SIZE 12
 #define BOARD_WIDTH 5
@@ -48,15 +48,15 @@ int main(void) {
     drowInf.col = MAX_CHAR;
     drowInf.title = "Drow Infantry";
     drowInf.commander = "Jon";
-    drowInf.tier = 2;
-    drowInf.dmg = 1;
-    drowInf.size = 6;
-    drowInf.atk = 4;
-    drowInf.def = 12;
-    drowInf.pow = 3;
-    drowInf.toughness = 13;
-    drowInf.morale = 1;
-    drowInf.communicaiton = 2;
+    drowInf.tier = "02";
+    drowInf.dmg = "01";
+    drowInf.size = "06";
+    drowInf.atk = "04";
+    drowInf.def = "12";
+    drowInf.pow = "03";
+    drowInf.toughness = "13";
+    drowInf.morale = "01";
+    drowInf.communicaiton = "02";
 
     // Initialize the Board Data
     renderer.resetPlayArea(board);
@@ -94,9 +94,18 @@ int main(void) {
         mousePosition = GetMousePosition();
         for (int i = 0; i < numOfTiles; i++) {
             if (!board.tiles->hasUnit) {
-            }
-            else (CheckCollisionPointRec(mousePosition, board.tiles[i].rec) && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
 
+            }
+            else if (CheckCollisionPointRec(mousePosition, board.tiles[i].rec) && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+                
+
+            }
+            else if (CheckCollisionPointRec(mousePosition, board.tiles[i].rec)) {
+                // Draw glow around hoverred over item.
+
+            }
+            else {
+                // TODO: (Jon) Anything?
             }
         }
 
@@ -138,7 +147,7 @@ int main(void) {
             ClearBackground(RAYWHITE);
 
             renderer.test_drawGameBoard(board);
-            for (int i = 0; i < BOARD_WIDTH * BOARD_HEIGTH; i++) {
+            for (int i = 0; i < BOARD_WIDTH * BOARD_HEIGHT; i++) {
                 if (board.tiles[i].hasUnit) {
                     renderer.drawUnitCard(board.tiles[i]);
                 }

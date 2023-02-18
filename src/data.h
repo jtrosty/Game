@@ -6,16 +6,16 @@ struct UnitData {
     unsigned char col;
     char* title;
     char* commander;
-    unsigned char tier;
-    unsigned char dmg;
-    unsigned char size;
-    unsigned char atk;
-    unsigned char def;
-    unsigned char pow;
-    unsigned char toughness;
-    unsigned char morale;
-    unsigned char communicaiton;
-    unsigned char traits[5]{0};
+    char* tier;
+    char* dmg;
+    char* size;
+    char* atk;
+    char* def;
+    char* pow;
+    char* toughness;
+    char* morale;
+    char* communicaiton;
+    char* traits[5]{0};
 };
 
 struct Tile {
