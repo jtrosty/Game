@@ -27,27 +27,48 @@ void Render::test_drawGameBoard(BoardData& board) {
 
 void Render::drawUnitCard(Tile& tile) {
     int offset = 30;
-    int spacing = 20;
+    int spacing20 = 20;
+    int spacing = 15;
+    int vertSpacing = 10;
+    int cardFontSize = 5;
     assert(tile.hasUnit == 1);
     UnitData u = *(tile.unit);
     DrawRectangleRoundedLines(tile.rec, 2.0, 2, 2.0, BLACK);
+
     int xPos = tile.rec.x + offset;
     int yPos =  tile.rec.y;
-    DrawText(u.title,           xPos,    yPos, 5, BLACK);
+    DrawText(u.title,           xPos,    yPos, cardFontSize, BLACK);
+    yPos += vertSpacing;
+    DrawText(u.commander,       xPos,    yPos, cardFontSize, BLACK);
     xPos += offset;
-    yPos += spacing;
-    DrawText(u.commander,       xPos,    yPos, 5, BLACK);
-    DrawText("SIZE: ",          xPos + offset + (tile.rec.width / 2),    tile.rec.y + 5, 5, BLACK);
-    DrawText(u.size,            tile.rec.x + offset + (tile.rec.width / 2) + offset,    tile.rec.y + 5, 5, BLACK);
-    DrawText("ATK: ",           tile.rec.x + offset,    tile.rec.y + 20, 5, BLACK);
-    DrawText(u.atk,             tile.rec.x + offset + 20,    tile.rec.y + 20, 5, BLACK);
-    DrawText("DEF: ",           tile.rec.x + (offset << 1),    tile.rec.y + 20, 5, BLACK);
-    DrawText(u.def,             tile.rec.x + (offset << 1) + 20,    tile.rec.y + 20, 5, BLACK);
-    DrawText(u.def,             tile.rec.x + 5,         tile.rec.y + 20, 5, BLACK);
-    DrawText(u.pow,             tile.rec.x + 5,         tile.rec.y + 20, 5, BLACK);
-    DrawText(u.toughness,       tile.rec.x + 5,         tile.rec.y + 20, 5, BLACK);
-    DrawText(u.morale,          tile.rec.x + 5,         tile.rec.y + 20, 5, BLACK);
-    DrawText(u.communicaiton,   tile.rec.x + 5,         tile.rec.y + 20, 5, BLACK);
+    DrawText("SIZE: ",          xPos,    yPos, cardFontSize, BLACK);
+    xPos += spacing;
+    DrawText(u.size,            xPos,    yPos, cardFontSize, BLACK);
+    xPos -= (offset + offset);
+    yPos += offset;
+    DrawText("ATK: ",           xPos,    yPos, cardFontSize, BLACK);
+    xPos += spacing20;
+    DrawText(u.atk,             xPos,    yPos, cardFontSize, BLACK);
+    xPos += spacing;
+    DrawText("DEF: ",           xPos,    yPos, cardFontSize, BLACK);
+    xPos += spacing;
+    DrawText(u.def,             xPos,    yPos, cardFontSize, BLACK);
+    xPos += spacing;
+    DrawText("POW: ",           xPos,    yPos, cardFontSize, BLACK);
+    xPos += spacing;
+    DrawText(u.pow,             xPos,    yPos, cardFontSize, BLACK);
+    xPos += spacing;
+    DrawText("TOU: ",           xPos,    yPos, cardFontSize, BLACK);
+    xPos += spacing;
+    DrawText(u.toughness,       xPos,    yPos, cardFontSize, BLACK);
+    xPos += spacing;
+    DrawText("MOR: ",           xPos,    yPos, cardFontSize, BLACK);
+    xPos += spacing;
+    DrawText(u.morale,          xPos,    yPos, cardFontSize, BLACK);
+    xPos += spacing;
+    DrawText("COM: ",           xPos,    yPos, cardFontSize, BLACK);
+    xPos += spacing;
+    DrawText(u.communicaiton,   xPos,    yPos, cardFontSize, BLACK);
 }
 
 void Render::drawUnitCard(UnitData& card, Tile& tile) {
