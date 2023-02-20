@@ -8,6 +8,7 @@ struct UnitData {
     char* commander;
     char* tier;
     char* dmg;
+    char* numOfAtk;
     char* size;
     char* atk;
     char* def;

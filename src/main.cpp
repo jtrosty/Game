@@ -50,6 +50,7 @@ int main(void) {
     drowInf.commander = "Jon";
     drowInf.tier = "02";
     drowInf.dmg = "01";
+    drowInf.numOfAtk = "01";
     drowInf.size = "06";
     drowInf.atk = "04";
     drowInf.def = "12";
