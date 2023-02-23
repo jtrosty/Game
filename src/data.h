@@ -26,12 +26,18 @@ struct Tile {
     UnitData* unit;
 };
 
-struct BoardData{
+struct BoardData {
     unsigned char numRows;
     unsigned char numCols;
     int offset;
     int pixelWidth;
     int pixelHeight;
     Tile* tiles;
+};
+
+struct UserSelection {
+    Tile* tileSelected;
+    char tileIndex;
+    char mouseHeld;
 };
 

@@ -19,6 +19,7 @@ int main(void) {
 
     Platform platform(screenWidth, screenHeight, "Trosty Games", 30);
     Render renderer;
+    UserSelection userSelection{0};
 
     //TODO: Deletet when done with testing
     Vector2 ballPosition = { 100.0f, 100.0f };
@@ -88,19 +89,27 @@ int main(void) {
         else if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT)) ballColor = DARKBLUE;
         
         // ----------------------------------------------
+        // Collision detection of the mouse over of game piece.
+        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+            userSelection.mouseHeld = 0;
+        }
+
         mousePosition = GetMousePosition();
         for (int i = 0; i < numOfTiles; i++) {
             if (board.tiles[i].hasUnit == 0) {
 
             }
             else {
-                // Draw glow around hoverred over item.
-                   
                 if (CheckCollisionPointRec(mousePosition, board.tiles[i].rec) && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
                     ballColor = PURPLE;
+                    userSelection.tileSelected = &board.tiles[i];
+                    userSelection.tileIndex = i;
+                    userSelection.mouseHeld = 1;
                 }
                 else if (CheckCollisionPointRec(mousePosition, board.tiles[i].rec)) {
                     ballColor = YELLOW;
+                    userSelection.tileIndex = i;
+                    userSelection.mouseHeld = 0;
                 }
             }
         }
@@ -146,6 +155,12 @@ int main(void) {
             for (int i = 0; i < BOARD_WIDTH * BOARD_HEIGHT; i++) {
                 if (board.tiles[i].hasUnit) {
                     renderer.drawUnitCard(board.tiles[i]);
+                }
+                if (userSelection.mouseHeld && userSelection.tileIndex != 0xFF) {
+                    renderer.drawUnitCardSelected(board.tiles[userSelection.tileIndex]);
+                }
+                else if (userSelection.tileIndex != 0xFF) {
+                    renderer.drawUnitCardMouseOver(board.tiles[userSelection.tileIndex]);
                 }
             }
             //renderer.test_DrawRectangle(board[0]);

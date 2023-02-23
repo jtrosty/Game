@@ -25,6 +25,16 @@ void Render::test_drawGameBoard(BoardData& board) {
     }
 }
 
+void Render::drawUnitCardMouseOver(Tile& tile) {
+    drawUnitCard(tile);
+    DrawRectangleRoundedLines(tile.rec, 2.0, 2, 2.0, WHITE);
+}
+
+void Render::drawUnitCardSelected(Tile& tile) {
+    drawUnitCard(tile);
+    DrawRectangleRoundedLines(tile.rec, 2.0, 2, 2.0, GREEN);
+}
+
 void Render::drawUnitCard(Tile& tile) {
     int offset = 30;
     int spacing25 = 25;

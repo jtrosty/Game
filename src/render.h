@@ -18,5 +18,7 @@ class Render {
     void drawUnitCard(Tile& tile);
     void drawUnitCard(UnitData& card, Tile& tile);
     void resetPlayArea(BoardData& board);
+    void drawUnitCardMouseOver(Tile& tile);
+    void drawUnitCardSelected(Tile& tile);
 
 };
