@@ -86,27 +86,22 @@ int main(void) {
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) ballColor = MAROON;
         else if (IsMouseButtonPressed(MOUSE_BUTTON_MIDDLE)) ballColor = LIME;
         else if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT)) ballColor = DARKBLUE;
-        else if (IsMouseButtonPressed(MOUSE_BUTTON_SIDE)) ballColor = PURPLE;
-        else if (IsMouseButtonPressed(MOUSE_BUTTON_EXTRA)) ballColor = YELLOW;
-        else if (IsMouseButtonPressed(MOUSE_BUTTON_FORWARD)) ballColor = ORANGE;
-        else if (IsMouseButtonPressed(MOUSE_BUTTON_BACK)) ballColor = BEIGE;
         
         // ----------------------------------------------
         mousePosition = GetMousePosition();
         for (int i = 0; i < numOfTiles; i++) {
-            if (!board.tiles->hasUnit) {
-
-            }
-            else if (CheckCollisionPointRec(mousePosition, board.tiles[i].rec) && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-                
-
-            }
-            else if (CheckCollisionPointRec(mousePosition, board.tiles[i].rec)) {
-                // Draw glow around hoverred over item.
+            if (board.tiles[i].hasUnit == 0) {
 
             }
             else {
-                // TODO: (Jon) Anything?
+                // Draw glow around hoverred over item.
+                   
+                if (CheckCollisionPointRec(mousePosition, board.tiles[i].rec) && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+                    ballColor = PURPLE;
+                }
+                else if (CheckCollisionPointRec(mousePosition, board.tiles[i].rec)) {
+                    ballColor = YELLOW;
+                }
             }
         }
 
