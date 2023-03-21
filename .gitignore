@@ -44,3 +44,10 @@ build/
 # art
 *.png
 *.xcf
+*.pdb
+*.txt
+*.id
+*.rdbg
+*.db
+*.suo
+*.sqlite
