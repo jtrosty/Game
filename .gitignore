@@ -9,6 +9,10 @@ lib/
 game
 scripts/
 build/
+raylib-zig/
+zig-cache/
+zig-out/
+.vs/
 
 # Compiled Object files
 *.slo
