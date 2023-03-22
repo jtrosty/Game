@@ -8,16 +8,51 @@
 const std = @import("std");
 const rl = @import("raylib");
 
+const Player = struct {
+    shipHeight:     f32;
+    position:       rl.Vector2;
+    speed:          rl.Vector2;
+    acceleartion:   f32;
+    rotation:       f32;
+    collider:       rl.Vector3;
+    color:          rl.Color;
+};
+
+const Bullet = struct {
+    shipHeight: f32;
+ 
+};
+
+const Particle = struct {
+    rl.Vector2 position;
+    rl.Color color;
+    life:
+    // Particle type
+};
+
+
+pub fn DrawParticle(&p: Particle) {
+    rl.DrawCircle(p.position.x, p.position.y, 5, p.color);
+}
+
+
 pub fn main() anyerror!void {
     // Initialization
     //--------------------------------------------------------------------------------------
     const screenWidth = 800;
     const screenHeight = 450;
 
-    var playerX: i32 = screenWidth / 2;
-    var playerY: i32 = screenHeight / 2;
-    var playerColor = rl.RED;
-    const testVar: f32 = 23.1;
+    const player: Player{
+        shipHeight = 5.0;
+        position.x = screenWidth / 2;
+        position.y = screenHeight / 2;
+        acceleartion = 0.0;
+        rotation = 0.0;
+        collider.x = player.position.x + @sin(player.rotation * rl.DEG2RAD) * player.shipHeight / 2.5f;
+        collider.y = player.position.y - @cos(player.rotation * rl.DEG2RAD) * player.shipHeight / 2.5f;
+        collider.z = 12;
+        color = rl.RED;
+    };
 
     rl.InitWindow(screenWidth, screenHeight, "raylib-zig [core] example - basic window");
 
@@ -58,8 +93,8 @@ pub fn main() anyerror!void {
         var debug_gamepadAxisLY: f32 = rl.GetGamepadAxisMovement(0, 1) * movementMultiplier;
         var debug_gamepadAxisRX: f32 = rl.GetGamepadAxisMovement(0, 2) * movementMultiplier;
         var debug_gamepadAxisRY: f32 = rl.GetGamepadAxisMovement(0, 3) * movementMultiplier;
-        playerX += @floatToInt(i32, debug_gamepadAxisLX);
-        playerY += @floatToInt(i32, debug_gamepadAxisLY);
+        player.position.x += @floatToInt(i32, debug_gamepadAxisLX);
+        player.position.y += @floatToInt(i32, debug_gamepadAxisLY);
         debug_gamepadAxisLX = 1.0;
 
         //----------------------------------------------------------------------------------
@@ -67,7 +102,10 @@ pub fn main() anyerror!void {
 
         rl.ClearBackground(rl.WHITE);
         rl.DrawCircle(playerX, playerY, 9, rl.RED);
-
+        const v1: rl.Vector2 = { player.position.x + @sinf(player.rotation*DEG2RAD)*(player.shipHeight), player.position.y - @cosf(player.rotation*DEG2RAD)*(player.shipHeight) };
+        const v2: rl.Vector2 = { player.position.x - @cosf(player.rotation*DEG2RAD)*(PLAYER_BASE_SIZE/2), player.position.y - @sinf(player.rotation*DEG2RAD)*(player.shipHeight/2) };
+        const v3: rl.Vector2 = { player.position.x + @cosf(player.rotation*DEG2RAD)*(PLAYER_BASE_SIZE/2), player.position.y + @sinf(player.rotation*DEG2RAD)*(player.shipHeight/2) };
+        rl.DrawTriangle(v1, v2, v3, player.color);
         rl.DrawText("Congrats! You created your first window!", 190, 200, 20, rl.LIGHTGRAY);
 
         // Debug
