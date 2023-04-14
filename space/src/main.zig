@@ -13,6 +13,7 @@ const Player = struct {
     shipHeight: f32,
     position: rl.Vector2,
     speed: rl.Vector2,
+    speed_scale: f32,
     acceleartion: f32,
     rotation: f32,
     collider: rl.Vector3,
@@ -42,13 +43,14 @@ pub fn main() anyerror!void {
     //--------------------------------------------------------------------------------------
     const screenWidth = 800;
     const screenHeight = 450;
-    const SHIP_HEIGHT = 10.0;
+    const SHIP_HEIGHT = 40.0;
 
     var player = Player{
         .shipHeight = SHIP_HEIGHT,
         .position = rl.Vector2{ .x = screenWidth / 2.0, .y = screenHeight / 2.0 },
         .acceleartion = 0.0,
         .speed = rl.Vector2{ .x = 0.0, .y = 0.0 },
+        .speed_scale = 0.5,
         .rotation = 0.0,
         .collider = rl.Vector3{
             .x = (screenWidth / 2) + @sin(0.0 * DEG2RAD) * (SHIP_HEIGHT / 2.5),
@@ -94,26 +96,37 @@ pub fn main() anyerror!void {
         if (rl.IsGamepadButtonDown(0, rl.GamepadButton.GAMEPAD_BUTTON_RIGHT_TRIGGER_1)) {}
 
         // Draw axis: left joystick
-        const movementMultiplier = 10.0;
-        var debug_gamepadAxisLX: f32 = rl.GetGamepadAxisMovement(0, 0) * movementMultiplier;
-        var debug_gamepadAxisLY: f32 = rl.GetGamepadAxisMovement(0, 1) * movementMultiplier;
-        var debug_gamepadAxisRX: f32 = rl.GetGamepadAxisMovement(0, 2) * movementMultiplier;
-        var debug_gamepadAxisRY: f32 = rl.GetGamepadAxisMovement(0, 3) * movementMultiplier;
-        player.position.x += debug_gamepadAxisLX;
-        player.position.y += debug_gamepadAxisLY;
-        const zeroPos = rl.Vector2{ .x = 0, .y = 0 };
-        const dirVect = rl.Vector2{ .x = debug_gamepadAxisLX, .y = debug_gamepadAxisLY };
-        player.rotation = rlm.Vector2Angle(zeroPos, dirVect);
-        debug_gamepadAxisLX = 1.0;
+        const movement_scale = 10.0;
+        var gamepad_axis_LX: f32 = rl.GetGamepadAxisMovement(0, 0) * movement_scale;
+        var gamepad_axis_LY: f32 = rl.GetGamepadAxisMovement(0, 1) * movement_scale;
+        var gamepad_axis_RX: f32 = rl.GetGamepadAxisMovement(0, 2) * movement_scale;
+        var gamepad_axis_RY: f32 = rl.GetGamepadAxisMovement(0, 3) * movement_scale;
+        player.position.x += (gamepad_axis_LX * player.speed_scale);
+        player.position.y += (gamepad_axis_LY * player.speed_scale);
+        const zeroPos = rl.Vector2{ .x = 1, .y = 0 };
+        _ = zeroPos;
+
+        const analog_stick_floor = 0.2;
+
+        if ((@fabs(gamepad_axis_LX) > analog_stick_floor) and (@fabs(gamepad_axis_LY) > analog_stick_floor)) {
+            player.rotation = -std.math.atan2(f32, gamepad_axis_LX, gamepad_axis_LY);
+        } else {
+            // Do nothing if they are zero
+        }
+        //TODO: Detele the commented things
+        //const dirVect = rl.Vector2{ .x = debug_gamepad_axis_LX, .y = debug_gamepadAxisLY };
+        //player.rotation = rlm.Vector2Angle(zeroPos, dirVect);
+        //std.debug.print("player rot: {}\n", .{player.rotation});
+        gamepad_axis_LX = 1.0;
 
         //----------------------------------------------------------------------------------
         rl.BeginDrawing();
 
         rl.ClearBackground(rl.WHITE);
         //rl.DrawCircleV(player.position, 9, rl.RED);
-        const v1 = rl.Vector2{ .x = player.position.x + @sin(player.rotation * DEG2RAD) * (player.shipHeight), .y = player.position.y - @cos(player.rotation * DEG2RAD) * (player.shipHeight) };
-        const v2 = rl.Vector2{ .x = player.position.x - @cos(player.rotation * DEG2RAD) * (player.shipHeight / 2), .y = player.position.y - @sin(player.rotation * DEG2RAD) * (player.shipHeight / 2) };
-        const v3 = rl.Vector2{ .x = player.position.x + @cos(player.rotation * DEG2RAD) * (player.shipHeight / 2), .y = player.position.y + @sin(player.rotation * DEG2RAD) * (player.shipHeight / 2) };
+        const v1 = rl.Vector2{ .x = player.position.x + @sin(player.rotation) * (player.shipHeight), .y = player.position.y - @cos(player.rotation) * (player.shipHeight) };
+        const v2 = rl.Vector2{ .x = player.position.x - @cos(player.rotation) * (player.shipHeight / 2), .y = player.position.y - @sin(player.rotation) * (player.shipHeight / 2) };
+        const v3 = rl.Vector2{ .x = player.position.x + @cos(player.rotation) * (player.shipHeight / 2), .y = player.position.y + @sin(player.rotation) * (player.shipHeight / 2) };
         rl.DrawTriangle(v1, v2, v3, player.color);
         rl.DrawText("Congrats! You created your first window!", 190, 200, 20, rl.LIGHTGRAY);
 
@@ -122,10 +135,10 @@ pub fn main() anyerror!void {
         const debug_axis = [_]u8{ 0, 1, 2, 3 };
         rl.DrawText(rl.TextFormat("DETECTED AXIS [%i]:", rl.GetGamepadAxisCount(0)), 10, 50, 10, rl.MAROON);
 
-        rl.DrawText(rl.TextFormat("LX AXIS %i: %.2f", debug_axis[0], debug_gamepadAxisLX), 20, 70 + 20 * 0, 10, rl.DARKGRAY);
-        rl.DrawText(rl.TextFormat("LY AXIS %i: %.2f", debug_axis[1], debug_gamepadAxisLY), 20, 70 + 20 * 1, 10, rl.DARKGRAY);
-        rl.DrawText(rl.TextFormat("RX AXIS %i: %.2f", debug_axis[2], debug_gamepadAxisRX), 20, 70 + 20 * 2, 10, rl.DARKGRAY);
-        rl.DrawText(rl.TextFormat("RY AXIS %i: %.2f", debug_axis[3], debug_gamepadAxisRY), 20, 70 + 20 * 3, 10, rl.DARKGRAY);
+        rl.DrawText(rl.TextFormat("LX AXIS %i: %.2f", debug_axis[0], gamepad_axis_LX), 20, 70 + 20 * 0, 10, rl.DARKGRAY);
+        rl.DrawText(rl.TextFormat("LY AXIS %i: %.2f", debug_axis[1], gamepad_axis_LY), 20, 70 + 20 * 1, 10, rl.DARKGRAY);
+        rl.DrawText(rl.TextFormat("RX AXIS %i: %.2f", debug_axis[2], gamepad_axis_RX), 20, 70 + 20 * 2, 10, rl.DARKGRAY);
+        rl.DrawText(rl.TextFormat("RY AXIS %i: %.2f", debug_axis[3], gamepad_axis_RY), 20, 70 + 20 * 3, 10, rl.DARKGRAY);
         //std.debug.print("Left Xaxis: {d}\n", .{debug_gamePadAxisLX});
         //
         //        for (debug_axis) |i| {
