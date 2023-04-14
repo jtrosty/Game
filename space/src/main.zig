@@ -10,7 +10,7 @@ const rl = @import("raylib");
 const rlm = @import("raylib-math");
 
 const Player = struct {
-    shipHeight: f32,
+    ship_height: f32,
     position: rl.Vector2,
     speed: rl.Vector2,
     speed_scale: f32,
@@ -21,7 +21,7 @@ const Player = struct {
 };
 
 const Bullet = struct {
-    shipHeight: f32,
+    ship_height: f32,
 };
 
 const Particle = struct {
@@ -46,7 +46,7 @@ pub fn main() anyerror!void {
     const SHIP_HEIGHT = 40.0;
 
     var player = Player{
-        .shipHeight = SHIP_HEIGHT,
+        .ship_height = SHIP_HEIGHT,
         .position = rl.Vector2{ .x = screenWidth / 2.0, .y = screenHeight / 2.0 },
         .acceleartion = 0.0,
         .speed = rl.Vector2{ .x = 0.0, .y = 0.0 },
@@ -96,27 +96,29 @@ pub fn main() anyerror!void {
         if (rl.IsGamepadButtonDown(0, rl.GamepadButton.GAMEPAD_BUTTON_RIGHT_TRIGGER_1)) {}
 
         // Draw axis: left joystick
-        const movement_scale = 10.0;
-        var gamepad_axis_LX: f32 = rl.GetGamepadAxisMovement(0, 0) * movement_scale;
-        var gamepad_axis_LY: f32 = rl.GetGamepadAxisMovement(0, 1) * movement_scale;
-        var gamepad_axis_RX: f32 = rl.GetGamepadAxisMovement(0, 2) * movement_scale;
-        var gamepad_axis_RY: f32 = rl.GetGamepadAxisMovement(0, 3) * movement_scale;
+        var gamepad_axis_LX: f32 = rl.GetGamepadAxisMovement(0, 0);
+        var gamepad_axis_LY: f32 = rl.GetGamepadAxisMovement(0, 1);
+        var gamepad_axis_RX: f32 = rl.GetGamepadAxisMovement(0, 2);
+        var gamepad_axis_RY: f32 = rl.GetGamepadAxisMovement(0, 3);
         player.position.x += (gamepad_axis_LX * player.speed_scale);
         player.position.y += (gamepad_axis_LY * player.speed_scale);
-        const zeroPos = rl.Vector2{ .x = 1, .y = 0 };
-        _ = zeroPos;
+        const gamepad_dir_left: rl.Vector2 = rl.Vector2{ .x = gamepad_axis_LX, .y = gamepad_axis_LY };
 
         const analog_stick_floor = 0.2;
+        const gamepad_vector_length = rlm.Vector2Length(gamepad_dir_left);
 
-        if ((@fabs(gamepad_axis_LX) > analog_stick_floor) and (@fabs(gamepad_axis_LY) > analog_stick_floor)) {
+        //if ((@fabs(gamepad_axis_LX) > analog_stick_floor) and (@fabs(gamepad_axis_LY) > analog_stick_floor)) {
+        if (gamepad_vector_length > analog_stick_floor) {
+            // Need the negative to get the roation to be correct
             player.rotation = -std.math.atan2(f32, gamepad_axis_LX, gamepad_axis_LY);
+            player.rotation += PI;
         } else {
             // Do nothing if they are zero
         }
         //TODO: Detele the commented things
         //const dirVect = rl.Vector2{ .x = debug_gamepad_axis_LX, .y = debug_gamepadAxisLY };
         //player.rotation = rlm.Vector2Angle(zeroPos, dirVect);
-        //std.debug.print("player rot: {}\n", .{player.rotation});
+        std.debug.print("player rot: {}\n", .{player.rotation});
         gamepad_axis_LX = 1.0;
 
         //----------------------------------------------------------------------------------
@@ -124,9 +126,9 @@ pub fn main() anyerror!void {
 
         rl.ClearBackground(rl.WHITE);
         //rl.DrawCircleV(player.position, 9, rl.RED);
-        const v1 = rl.Vector2{ .x = player.position.x + @sin(player.rotation) * (player.shipHeight), .y = player.position.y - @cos(player.rotation) * (player.shipHeight) };
-        const v2 = rl.Vector2{ .x = player.position.x - @cos(player.rotation) * (player.shipHeight / 2), .y = player.position.y - @sin(player.rotation) * (player.shipHeight / 2) };
-        const v3 = rl.Vector2{ .x = player.position.x + @cos(player.rotation) * (player.shipHeight / 2), .y = player.position.y + @sin(player.rotation) * (player.shipHeight / 2) };
+        const v1 = rl.Vector2{ .x = player.position.x + @sin(player.rotation) * (player.ship_height), .y = player.position.y - @cos(player.rotation) * (player.ship_height) };
+        const v2 = rl.Vector2{ .x = player.position.x - @cos(player.rotation) * (player.ship_height / 3), .y = player.position.y - @sin(player.rotation) * (player.ship_height / 3) };
+        const v3 = rl.Vector2{ .x = player.position.x + @cos(player.rotation) * (player.ship_height / 3), .y = player.position.y + @sin(player.rotation) * (player.ship_height / 3) };
         rl.DrawTriangle(v1, v2, v3, player.color);
         rl.DrawText("Congrats! You created your first window!", 190, 200, 20, rl.LIGHTGRAY);
 
