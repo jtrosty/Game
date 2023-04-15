@@ -16,6 +16,8 @@ const Player = struct {
     speed_scale: f32,
     acceleartion: f32,
     rotation: f32,
+    gun_direction: rl.Vector2,
+    gun_rotation: f32,
     collider: rl.Vector3,
     color: rl.Color,
 };
@@ -52,6 +54,8 @@ pub fn main() anyerror!void {
         .speed = rl.Vector2{ .x = 0.0, .y = 0.0 },
         .speed_scale = 0.5,
         .rotation = 0.0,
+        .gun_direction = rl.Vector2{ .x = 0.0, .y = 0.0 },
+        .gun_rotation = 0.0,
         .collider = rl.Vector3{
             .x = (screenWidth / 2) + @sin(0.0 * DEG2RAD) * (SHIP_HEIGHT / 2.5),
             .y = (screenHeight / 2) - @cos(0.0 * DEG2RAD) * (SHIP_HEIGHT / 2.5),
@@ -74,7 +78,6 @@ pub fn main() anyerror!void {
         if (rl.IsGamepadAvailable(0)) {} else {
             std.debug.print("gamepad not available.", .{});
         }
-
         if (rl.IsGamepadButtonDown(0, rl.GamepadButton.GAMEPAD_BUTTON_MIDDLE)) {}
 
         // Draw buttons: basic
@@ -103,18 +106,30 @@ pub fn main() anyerror!void {
         player.position.x += (gamepad_axis_LX * player.speed_scale);
         player.position.y += (gamepad_axis_LY * player.speed_scale);
         const gamepad_dir_left: rl.Vector2 = rl.Vector2{ .x = gamepad_axis_LX, .y = gamepad_axis_LY };
+        const gamepad_dir_right: rl.Vector2 = rl.Vector2{ .x = gamepad_axis_RX, .y = gamepad_axis_RY };
 
         const analog_stick_floor = 0.2;
-        const gamepad_vector_length = rlm.Vector2Length(gamepad_dir_left);
+        const gamepad_vector_length_left = rlm.Vector2Length(gamepad_dir_left);
+        const gamepad_vector_length_right = rlm.Vector2Length(gamepad_dir_right);
 
         //if ((@fabs(gamepad_axis_LX) > analog_stick_floor) and (@fabs(gamepad_axis_LY) > analog_stick_floor)) {
-        if (gamepad_vector_length > analog_stick_floor) {
+        if (gamepad_vector_length_left > analog_stick_floor) {
             // Need the negative to get the roation to be correct
             player.rotation = -std.math.atan2(f32, gamepad_axis_LX, gamepad_axis_LY);
             player.rotation += PI;
         } else {
             // Do nothing if they are zero
         }
+
+        if (gamepad_vector_length_right > analog_stick_floor) {
+            // Need the negative to get the roation to be correct
+            player.gun_rotation = -std.math.atan2(f32, gamepad_axis_RX, gamepad_axis_RY);
+            player.gun_rotation += PI;
+        } else {
+            // Do nothing if they are zero
+        }
+
+
         //TODO: Detele the commented things
         //const dirVect = rl.Vector2{ .x = debug_gamepad_axis_LX, .y = debug_gamepadAxisLY };
         //player.rotation = rlm.Vector2Angle(zeroPos, dirVect);
@@ -126,10 +141,16 @@ pub fn main() anyerror!void {
 
         rl.ClearBackground(rl.WHITE);
         //rl.DrawCircleV(player.position, 9, rl.RED);
-        const v1 = rl.Vector2{ .x = player.position.x + @sin(player.rotation) * (player.ship_height), .y = player.position.y - @cos(player.rotation) * (player.ship_height) };
-        const v2 = rl.Vector2{ .x = player.position.x - @cos(player.rotation) * (player.ship_height / 3), .y = player.position.y - @sin(player.rotation) * (player.ship_height / 3) };
-        const v3 = rl.Vector2{ .x = player.position.x + @cos(player.rotation) * (player.ship_height / 3), .y = player.position.y + @sin(player.rotation) * (player.ship_height / 3) };
-        rl.DrawTriangle(v1, v2, v3, player.color);
+        const v1_front = rl.Vector2{ .x = player.position.x + @sin(player.rotation) * (player.ship_height), .y = player.position.y - @cos(player.rotation) * (player.ship_height) };
+        const v2_left = rl.Vector2{ .x = player.position.x - @cos(player.rotation) * (player.ship_height / 3), .y = player.position.y - @sin(player.rotation) * (player.ship_height / 3) };
+        const v3_right = rl.Vector2{ .x = player.position.x + @cos(player.rotation) * (player.ship_height / 3), .y = player.position.y + @sin(player.rotation) * (player.ship_height / 3) };
+        const v_gun_rear_1_base   = rl.Vector2{ .x = player.position.x - @cos(player.rotation) * (player.ship_height / 4), .y = player.position.y - @sin(player.rotation) * (player.ship_height / 4) };
+        const v_gun_rear_1_distal = rl.Vector2{ .x = v_gun_rear_1_base.x + @cos(player.gun_rotation), .y = v_gun_rear_1_base.y + @sin(player.gun_rotation)};
+        const v_gun_rear_2_base   = rl.Vector2{ .x = player.position.x + @cos(player.rotation) * (player.ship_height / 4), .y = player.position.y + @sin(player.rotation) * (player.ship_height / 4) };
+        const v_gun_rear_2_distal = rl.Vector2{ .x = v_gun_rear_2_base.x + @cos(player.gun_rotation), .y = v_gun_rear_2_base.y + @sin(player.gun_rotation)};
+        rl.DrawTriangle(v1_front, v2_left, v3_right, player.color);
+        rl.DrawLineEx(v_gun_rear_1_base, v_gun_rear_1_distal, 1, rl.WHITE);
+        rl.DrawLineEx(v_gun_rear_2_base, v_gun_rear_2_distal, 1, rl.WHITE);
         rl.DrawText("Congrats! You created your first window!", 190, 200, 20, rl.LIGHTGRAY);
 
         // Debug
