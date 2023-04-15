@@ -11,6 +11,7 @@ const rlm = @import("raylib-math");
 
 const Player = struct {
     ship_height: f32,
+    gun_length: f32,
     position: rl.Vector2,
     speed: rl.Vector2,
     speed_scale: f32,
@@ -43,16 +44,17 @@ const DEG2RAD: f32 = PI / 180.0;
 pub fn main() anyerror!void {
     // Initialization
     //--------------------------------------------------------------------------------------
-    const screenWidth = 800;
-    const screenHeight = 450;
+    const screenWidth = 1600;
+    const screenHeight = 900;
     const SHIP_HEIGHT = 40.0;
 
     var player = Player{
         .ship_height = SHIP_HEIGHT,
+        .gun_length = 15,
         .position = rl.Vector2{ .x = screenWidth / 2.0, .y = screenHeight / 2.0 },
         .acceleartion = 0.0,
         .speed = rl.Vector2{ .x = 0.0, .y = 0.0 },
-        .speed_scale = 0.5,
+        .speed_scale = 3.0,
         .rotation = 0.0,
         .gun_direction = rl.Vector2{ .x = 0.0, .y = 0.0 },
         .gun_rotation = 0.0,
@@ -124,16 +126,15 @@ pub fn main() anyerror!void {
         if (gamepad_vector_length_right > analog_stick_floor) {
             // Need the negative to get the roation to be correct
             player.gun_rotation = -std.math.atan2(f32, gamepad_axis_RX, gamepad_axis_RY);
-            player.gun_rotation += PI;
+            player.gun_rotation += PI / 2;
         } else {
             // Do nothing if they are zero
         }
 
-
         //TODO: Detele the commented things
         //const dirVect = rl.Vector2{ .x = debug_gamepad_axis_LX, .y = debug_gamepadAxisLY };
         //player.rotation = rlm.Vector2Angle(zeroPos, dirVect);
-        std.debug.print("player rot: {}\n", .{player.rotation});
+        std.debug.print("player rot: {}\n", .{player.gun_rotation});
         gamepad_axis_LX = 1.0;
 
         //----------------------------------------------------------------------------------
@@ -144,13 +145,20 @@ pub fn main() anyerror!void {
         const v1_front = rl.Vector2{ .x = player.position.x + @sin(player.rotation) * (player.ship_height), .y = player.position.y - @cos(player.rotation) * (player.ship_height) };
         const v2_left = rl.Vector2{ .x = player.position.x - @cos(player.rotation) * (player.ship_height / 3), .y = player.position.y - @sin(player.rotation) * (player.ship_height / 3) };
         const v3_right = rl.Vector2{ .x = player.position.x + @cos(player.rotation) * (player.ship_height / 3), .y = player.position.y + @sin(player.rotation) * (player.ship_height / 3) };
-        const v_gun_rear_1_base   = rl.Vector2{ .x = player.position.x - @cos(player.rotation) * (player.ship_height / 4), .y = player.position.y - @sin(player.rotation) * (player.ship_height / 4) };
-        const v_gun_rear_1_distal = rl.Vector2{ .x = v_gun_rear_1_base.x + @cos(player.gun_rotation), .y = v_gun_rear_1_base.y + @sin(player.gun_rotation)};
-        const v_gun_rear_2_base   = rl.Vector2{ .x = player.position.x + @cos(player.rotation) * (player.ship_height / 4), .y = player.position.y + @sin(player.rotation) * (player.ship_height / 4) };
-        const v_gun_rear_2_distal = rl.Vector2{ .x = v_gun_rear_2_base.x + @cos(player.gun_rotation), .y = v_gun_rear_2_base.y + @sin(player.gun_rotation)};
+
+        const v_rear_gun_center_point = rl.Vector2{ .x = player.position.x + @sin(player.rotation) * (player.ship_height / 6), .y = player.position.y - @cos(player.rotation) * (player.ship_height / 6) };
+
+        const v_gun_center_base = rl.Vector2{ .x = player.position.x + @sin(player.rotation) * (player.ship_height / 2), .y = player.position.y - @cos(player.rotation) * (player.ship_height / 2) };
+        const v_gun_rear_1_base = rl.Vector2{ .x = v_rear_gun_center_point.x - @cos(player.rotation) * (player.ship_height / 5), .y = v_rear_gun_center_point.y - @sin(player.rotation) * (player.ship_height / 5) };
+        const v_gun_rear_2_base = rl.Vector2{ .x = v_rear_gun_center_point.x + @cos(player.rotation) * (player.ship_height / 5), .y = v_rear_gun_center_point.y + @sin(player.rotation) * (player.ship_height / 5) };
+
+        const v_gun_center_distal = rl.Vector2{ .x = v_gun_center_base.x + @cos(player.gun_rotation) * player.gun_length, .y = v_gun_center_base.y + @sin(player.gun_rotation) * player.gun_length };
+        const v_gun_rear_1_distal = rl.Vector2{ .x = v_gun_rear_1_base.x + @cos(player.gun_rotation) * player.gun_length, .y = v_gun_rear_1_base.y + @sin(player.gun_rotation) * player.gun_length };
+        const v_gun_rear_2_distal = rl.Vector2{ .x = v_gun_rear_2_base.x + @cos(player.gun_rotation) * player.gun_length, .y = v_gun_rear_2_base.y + @sin(player.gun_rotation) * player.gun_length };
         rl.DrawTriangle(v1_front, v2_left, v3_right, player.color);
-        rl.DrawLineEx(v_gun_rear_1_base, v_gun_rear_1_distal, 1, rl.WHITE);
-        rl.DrawLineEx(v_gun_rear_2_base, v_gun_rear_2_distal, 1, rl.WHITE);
+        rl.DrawLineEx(v_gun_rear_1_base, v_gun_rear_1_distal, 3, rl.GREEN);
+        rl.DrawLineEx(v_gun_rear_2_base, v_gun_rear_2_distal, 3, rl.BLACK);
+        rl.DrawLineEx(v_gun_center_base, v_gun_center_distal, 3, rl.BLUE);
         rl.DrawText("Congrats! You created your first window!", 190, 200, 20, rl.LIGHTGRAY);
 
         // Debug
