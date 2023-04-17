@@ -81,7 +81,6 @@ pub fn main() anyerror!void {
             std.debug.print("gamepad not available.", .{});
         }
         if (rl.IsGamepadButtonDown(0, rl.GamepadButton.GAMEPAD_BUTTON_MIDDLE)) {}
-
         // Draw buttons: basic
         if (rl.IsGamepadButtonDown(0, rl.GamepadButton.GAMEPAD_BUTTON_MIDDLE_RIGHT)) {}
         if (rl.IsGamepadButtonDown(0, rl.GamepadButton.GAMEPAD_BUTTON_MIDDLE_LEFT)) {}
@@ -100,20 +99,63 @@ pub fn main() anyerror!void {
         if (rl.IsGamepadButtonDown(0, rl.GamepadButton.GAMEPAD_BUTTON_LEFT_TRIGGER_1)) {}
         if (rl.IsGamepadButtonDown(0, rl.GamepadButton.GAMEPAD_BUTTON_RIGHT_TRIGGER_1)) {}
 
-        // Draw axis: left joystick
+        // Left
         var gamepad_axis_LX: f32 = rl.GetGamepadAxisMovement(0, 0);
         var gamepad_axis_LY: f32 = rl.GetGamepadAxisMovement(0, 1);
+        // Right
         var gamepad_axis_RX: f32 = rl.GetGamepadAxisMovement(0, 2);
         var gamepad_axis_RY: f32 = rl.GetGamepadAxisMovement(0, 3);
-        player.position.x += (gamepad_axis_LX * player.speed_scale);
-        player.position.y += (gamepad_axis_LY * player.speed_scale);
+
+        // KEYBOARD
+        // E F R
+        if (rl.IsKeyDown(rl.KeyboardKey.KEY_E)) {
+            player.color = rl.YELLOW;
+        }
+        if (rl.IsKeyDown(rl.KeyboardKey.KEY_Q)) {
+            player.color = rl.BLUE;
+        }
+        if (rl.IsKeyDown(rl.KeyboardKey.KEY_R)) {
+            player.color = rl.GREEN;
+        }
+
+        var keyboard_x_input: f32 = 0.0;
+        var keyboard_y_input: f32 = 0.0;
+        if (rl.IsKeyDown(rl.KeyboardKey.KEY_W)) {
+            keyboard_y_input = -1.0;
+        }
+        else if (rl.IsKeyDown(rl.KeyboardKey.KEY_S)) {
+            keyboard_y_input = 1.0;
+        }
+        else {
+            keyboard_y_input = 0.0;
+        }
+        if (rl.IsKeyDown(rl.KeyboardKey.KEY_A)) {
+            keyboard_x_input = -1.0;
+        }
+        else if (rl.IsKeyDown(rl.KeyboardKey.KEY_D)) {
+            keyboard_x_input = 1.0;
+        }
+        else {
+            keyboard_x_input = 0.0;
+        }
+
         const gamepad_dir_left: rl.Vector2 = rl.Vector2{ .x = gamepad_axis_LX, .y = gamepad_axis_LY };
         const gamepad_dir_right: rl.Vector2 = rl.Vector2{ .x = gamepad_axis_RX, .y = gamepad_axis_RY };
 
+        // TODO(Jon): Make a constant somewhere
         const analog_stick_floor = 0.2;
         const gamepad_vector_length_left = rlm.Vector2Length(gamepad_dir_left);
         const gamepad_vector_length_right = rlm.Vector2Length(gamepad_dir_right);
 
+        if ((keyboard_x_input != 0.0) or (keyboard_y_input != 0.0)) {
+            player.position.x += (keyboard_x_input * player.speed_scale);
+            player.position.y += (keyboard_y_input * player.speed_scale);
+        }
+        else {
+            player.position.x += (gamepad_axis_LX * player.speed_scale);
+            player.position.y += (gamepad_axis_LY * player.speed_scale);
+        }
+        
         //if ((@fabs(gamepad_axis_LX) > analog_stick_floor) and (@fabs(gamepad_axis_LY) > analog_stick_floor)) {
         if (gamepad_vector_length_left > analog_stick_floor) {
             // Need the negative to get the roation to be correct
