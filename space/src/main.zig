@@ -164,13 +164,20 @@ pub fn main() anyerror!void {
         } else {
             // Do nothing if they are zero
         }
-
-        if (gamepad_vector_length_right > analog_stick_floor) {
-            // Need the negative to get the roation to be correct
-            player.gun_rotation = -std.math.atan2(f32, gamepad_axis_RX, gamepad_axis_RY);
+        // TODO(Jon): Mouse is bug but in generla it does what I need it to do. 
+        if (rl.IsMouseButtonDown(rl.MouseButton.MOUSE_BUTTON_LEFT)) {
+            const mouse_position: rl.Vector2 = rl.Vector2{ .x = rl.GetMousePosition().x, .y = rl.GetMousePosition().y };
+            player.gun_rotation = -std.math.atan2(f32, mouse_position.x, mouse_position.y);
             player.gun_rotation += PI / 2;
-        } else {
-            // Do nothing if they are zero
+        }
+        else {
+            if (gamepad_vector_length_right > analog_stick_floor) {
+                // Need the negative to get the roation to be correct
+                player.gun_rotation = -std.math.atan2(f32, gamepad_axis_RX, gamepad_axis_RY);
+                player.gun_rotation += PI / 2;
+            } else {
+                // Do nothing if they are zero
+            }
         }
 
         //TODO: Detele the commented things
