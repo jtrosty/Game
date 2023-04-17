@@ -167,7 +167,7 @@ pub fn main() anyerror!void {
         // TODO(Jon): Mouse is bug but in generla it does what I need it to do. 
         if (rl.IsMouseButtonDown(rl.MouseButton.MOUSE_BUTTON_LEFT)) {
             const mouse_position: rl.Vector2 = rl.Vector2{ .x = rl.GetMousePosition().x, .y = rl.GetMousePosition().y };
-            player.gun_rotation = -std.math.atan2(f32, mouse_position.x, mouse_position.y);
+            player.gun_rotation = -std.math.atan2(f32, mouse_position.x - player.position.x, mouse_position.y - player.position.y);
             player.gun_rotation += PI / 2;
         }
         else {
