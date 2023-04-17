@@ -140,7 +140,7 @@ pub fn main() anyerror!void {
         //----------------------------------------------------------------------------------
         rl.BeginDrawing();
 
-        rl.ClearBackground(rl.WHITE);
+        rl.ClearBackground(rl.GRAY);
         //rl.DrawCircleV(player.position, 9, rl.RED);
         const v1_front = rl.Vector2{ .x = player.position.x + @sin(player.rotation) * (player.ship_height), .y = player.position.y - @cos(player.rotation) * (player.ship_height) };
         const v2_left = rl.Vector2{ .x = player.position.x - @cos(player.rotation) * (player.ship_height / 3), .y = player.position.y - @sin(player.rotation) * (player.ship_height / 3) };
