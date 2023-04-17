@@ -24,7 +24,11 @@ const Player = struct {
 };
 
 const Bullet = struct {
-    ship_height: f32,
+    position: rl.Vector2 = rl.Vector2{ .x = 0, .y = 0},
+    gun_direction: rl.Vector2 = rl.Vector2{ .x = 0, .y = 0},
+    speed_scale: f32 = 0.0,
+    rotation: f32 = 0.0,
+    collider: rl.Vector3,
 };
 
 const Particle = struct {
@@ -65,6 +69,7 @@ pub fn main() anyerror!void {
         },
         .color = rl.RED,
     };
+
 
     rl.InitWindow(screenWidth, screenHeight, "raylib-zig [core] example - basic window");
 
@@ -155,6 +160,7 @@ pub fn main() anyerror!void {
             player.position.x += (gamepad_axis_LX * player.speed_scale);
             player.position.y += (gamepad_axis_LY * player.speed_scale);
         }
+        // TODO: (Jon)  Position has been updated, update colider
         
         //if ((@fabs(gamepad_axis_LX) > analog_stick_floor) and (@fabs(gamepad_axis_LY) > analog_stick_floor)) {
         if (gamepad_vector_length_left > analog_stick_floor) {
