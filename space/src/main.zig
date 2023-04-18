@@ -8,6 +8,10 @@
 const std = @import("std");
 const rl = @import("raylib");
 const rlm = @import("raylib-math");
+const Allocator = std.mem.Allocator;
+const assert = std.debug.assert;
+
+const MAX_BULLETS = 15;
 
 const Player = struct {
     ship_height: f32,
@@ -19,16 +23,23 @@ const Player = struct {
     rotation: f32,
     gun_direction: rl.Vector2,
     gun_rotation: f32,
-    collider: rl.Vector3,
+    collider: rl.Vector3, // The collider will be a cirlce, x, y position, and z is the radius.
     color: rl.Color,
 };
 
+const Entity_Type = enum {
+    none,
+    normal_bullet,
+};
+
 const Bullet = struct {
-    position: rl.Vector2 = rl.Vector2{ .x = 0, .y = 0},
-    gun_direction: rl.Vector2 = rl.Vector2{ .x = 0, .y = 0},
+    bullet_type: Entity_Type = Entity_Type.none,
+    position: rl.Vector2 = rl.Vector2{ .x = 0, .y = 0 },
+    gun_direction: rl.Vector2 = rl.Vector2{ .x = 0, .y = 0 },
     speed_scale: f32 = 0.0,
     rotation: f32 = 0.0,
-    collider: rl.Vector3,
+    collider: rl.Vector3 = rl.Vector3{ .x = 0, .y = 0, .z = 0 },
+    size: f32 = 0.0,
 };
 
 const Particle = struct {
@@ -51,6 +62,7 @@ pub fn main() anyerror!void {
     const screenWidth = 1600;
     const screenHeight = 900;
     const SHIP_HEIGHT = 40.0;
+    var bullet_array = std.mem.zeroes([MAX_BULLETS]Bullet);
 
     var player = Player{
         .ship_height = SHIP_HEIGHT,
@@ -69,7 +81,6 @@ pub fn main() anyerror!void {
         },
         .color = rl.RED,
     };
-
 
     rl.InitWindow(screenWidth, screenHeight, "raylib-zig [core] example - basic window");
 
@@ -127,20 +138,16 @@ pub fn main() anyerror!void {
         var keyboard_y_input: f32 = 0.0;
         if (rl.IsKeyDown(rl.KeyboardKey.KEY_W)) {
             keyboard_y_input = -1.0;
-        }
-        else if (rl.IsKeyDown(rl.KeyboardKey.KEY_S)) {
+        } else if (rl.IsKeyDown(rl.KeyboardKey.KEY_S)) {
             keyboard_y_input = 1.0;
-        }
-        else {
+        } else {
             keyboard_y_input = 0.0;
         }
         if (rl.IsKeyDown(rl.KeyboardKey.KEY_A)) {
             keyboard_x_input = -1.0;
-        }
-        else if (rl.IsKeyDown(rl.KeyboardKey.KEY_D)) {
+        } else if (rl.IsKeyDown(rl.KeyboardKey.KEY_D)) {
             keyboard_x_input = 1.0;
-        }
-        else {
+        } else {
             keyboard_x_input = 0.0;
         }
 
@@ -155,13 +162,12 @@ pub fn main() anyerror!void {
         if ((keyboard_x_input != 0.0) or (keyboard_y_input != 0.0)) {
             player.position.x += (keyboard_x_input * player.speed_scale);
             player.position.y += (keyboard_y_input * player.speed_scale);
-        }
-        else {
+        } else {
             player.position.x += (gamepad_axis_LX * player.speed_scale);
             player.position.y += (gamepad_axis_LY * player.speed_scale);
         }
         // TODO: (Jon)  Position has been updated, update colider
-        
+
         //if ((@fabs(gamepad_axis_LX) > analog_stick_floor) and (@fabs(gamepad_axis_LY) > analog_stick_floor)) {
         if (gamepad_vector_length_left > analog_stick_floor) {
             // Need the negative to get the roation to be correct
@@ -170,13 +176,16 @@ pub fn main() anyerror!void {
         } else {
             // Do nothing if they are zero
         }
-        // TODO(Jon): Mouse is bug but in generla it does what I need it to do. 
+        // Update collision position
+        player.collider.x = (screenWidth / 2) + @sin(0.0 * DEG2RAD) * (SHIP_HEIGHT / 2.5);
+        player.collider.y = (screenHeight / 2) - @cos(0.0 * DEG2RAD) * (SHIP_HEIGHT / 2.5);
+
+        // TODO(Jon): Mouse is bug but in generla it does what I need it to do.
         if (rl.IsMouseButtonDown(rl.MouseButton.MOUSE_BUTTON_LEFT)) {
             const mouse_position: rl.Vector2 = rl.Vector2{ .x = rl.GetMousePosition().x, .y = rl.GetMousePosition().y };
             player.gun_rotation = -std.math.atan2(f32, mouse_position.x - player.position.x, mouse_position.y - player.position.y);
             player.gun_rotation += PI / 2;
-        }
-        else {
+        } else {
             if (gamepad_vector_length_right > analog_stick_floor) {
                 // Need the negative to get the roation to be correct
                 player.gun_rotation = -std.math.atan2(f32, gamepad_axis_RX, gamepad_axis_RY);
@@ -197,6 +206,7 @@ pub fn main() anyerror!void {
 
         rl.ClearBackground(rl.GRAY);
         //rl.DrawCircleV(player.position, 9, rl.RED);
+        // DRAWING THE CHARACTER
         const v1_front = rl.Vector2{ .x = player.position.x + @sin(player.rotation) * (player.ship_height), .y = player.position.y - @cos(player.rotation) * (player.ship_height) };
         const v2_left = rl.Vector2{ .x = player.position.x - @cos(player.rotation) * (player.ship_height / 3), .y = player.position.y - @sin(player.rotation) * (player.ship_height / 3) };
         const v3_right = rl.Vector2{ .x = player.position.x + @cos(player.rotation) * (player.ship_height / 3), .y = player.position.y + @sin(player.rotation) * (player.ship_height / 3) };
@@ -215,6 +225,17 @@ pub fn main() anyerror!void {
         rl.DrawLineEx(v_gun_rear_2_base, v_gun_rear_2_distal, 3, rl.BLACK);
         rl.DrawLineEx(v_gun_center_base, v_gun_center_distal, 3, rl.BLUE);
         rl.DrawText("Congrats! You created your first window!", 190, 200, 20, rl.LIGHTGRAY);
+
+        // DRAW THE BULLETS
+        for (bullet_array) |bullet| {
+            if (bullet.bullet_type == Entity_Type.none) {
+                continue;
+            }
+            // Draw the bullet.
+            else if (bullet.bullet_type == Entity_Type.normal_bullet) {
+                rl.DrawCircle(bullet.position.x, bullet.position.y, bullet.size, rl.YELLOW);
+            }
+        }
 
         // Debug
         // GAME PAD DEBUG--------------------------------------------------------------------------------
