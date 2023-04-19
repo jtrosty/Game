@@ -35,6 +35,7 @@ const Entity_Type = enum {
 const Bullet = struct {
     bullet_type: Entity_Type = Entity_Type.none,
     position: rl.Vector2 = rl.Vector2{ .x = 0, .y = 0 },
+    speed: rl.Vector2 = rl.Vector2{ .x = 0, .y = 0 },
     gun_direction: rl.Vector2 = rl.Vector2{ .x = 0, .y = 0 },
     speed_scale: f32 = 0.0,
     rotation: f32 = 0.0,
@@ -50,7 +51,7 @@ const Particle = struct {
 };
 
 pub fn DrawParticle(p: *Particle) void {
-    rl.DrawCircle(p.position.x, p.position.y, 5, p.color);
+    rl.DrawCircleV(p.position.x, p.position.y, 5, p.color);
 }
 
 const PI: f32 = 3.141592653589;
@@ -131,6 +132,9 @@ pub fn main() anyerror!void {
             player.color = rl.BLUE;
         }
         if (rl.IsKeyDown(rl.KeyboardKey.KEY_R)) {
+            player.color = rl.GREEN;
+        }
+        if (rl.IsKeyDown(rl.KeyboardKey.KEY_SPACE)) {
             player.color = rl.GREEN;
         }
 
@@ -233,7 +237,7 @@ pub fn main() anyerror!void {
             }
             // Draw the bullet.
             else if (bullet.bullet_type == Entity_Type.normal_bullet) {
-                rl.DrawCircle(bullet.position.x, bullet.position.y, bullet.size, rl.YELLOW);
+                rl.DrawCircleV(bullet.position, bullet.size, rl.YELLOW);
             }
         }
 
