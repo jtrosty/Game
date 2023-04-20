@@ -2,8 +2,10 @@ const std = @import("std");
 const rl = @import("raylib");
 const rlm = @import("raylib-math");
 const gmath = @import("math.zig");
+const entity = @import("Entity.zig");
 
 const SHIP_HEIGHT = 40.0;
+const MAX_BULLETS = 15;
 
 const Player = struct {
     ship_height: f32,
@@ -34,10 +36,15 @@ var player_one = Player{
         .y = (gmath.screenHeight / 2) - @cos(0.0 * gmath.DEG2RAD) * (SHIP_HEIGHT / 2.5),
         .z = 12,
     },
-    .color =rl.RED,
+    .color = rl.RED,
 };
+var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+const allocator = gpa.allocator();
+var bullet_array: []entity.Entity = none;
+//defer allocator.free(bullet_array);
 
 pub fn init_player() void {
+    bullet_array: []entity.Entity = try allocator.alloc(entity.Entity, MAX_BULLETS);
     player_one = Player{
         .ship_height = SHIP_HEIGHT,
         .gun_length = 15,
@@ -53,7 +60,7 @@ pub fn init_player() void {
             .y = (gmath.screenHeight / 2) - @cos(0.0 * gmath.DEG2RAD) * (SHIP_HEIGHT / 2.5),
             .z = 12,
         },
-        .color =rl.RED,
+        .color = rl.RED,
     };
 }
 
@@ -75,6 +82,20 @@ pub fn render_player() void {
     rl.DrawLineEx(v_gun_rear_1_base, v_gun_rear_1_distal, 3, rl.GREEN);
     rl.DrawLineEx(v_gun_rear_2_base, v_gun_rear_2_distal, 3, rl.BLACK);
     rl.DrawLineEx(v_gun_center_base, v_gun_center_distal, 3, rl.BLUE);
+}
+
+pub fn render_bullets() void {
+
+    // DRAW THE BULLETS
+    for (bullet_array) |bullet| {
+        if (bullet.bullet_type == entity.Entity_Type.none) {
+            continue;
+        }
+        // Draw the bullet.
+        else if (bullet.bullet_type == entity.Entity_Type.normal_bullet) {
+            rl.DrawCircleV(bullet.position, bullet.size, rl.YELLOW);
+        }
+    }
 }
 
 pub fn controller_player() void {
@@ -122,7 +143,7 @@ pub fn controller_player() void {
         //for (bullet_array) |bullet| {
         //    // Gen bullet
         //    if (bullet.bullet_type == Entity_Type.none) {
-        //        // TODO(Jon): Generate the bullet. 
+        //        // TODO(Jon): Generate the bullet.
 
         //    }
         //}
@@ -188,5 +209,4 @@ pub fn controller_player() void {
             // Do nothing if they are zero
         }
     }
-
 }
