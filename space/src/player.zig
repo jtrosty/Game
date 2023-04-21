@@ -5,7 +5,7 @@ const gmath = @import("math.zig");
 const entity = @import("Entity.zig");
 
 const SHIP_HEIGHT = 40.0;
-const MAX_BULLETS = 15;
+pub const MAX_BULLETS = 15;
 
 const Player = struct {
     ship_height: f32,
@@ -38,13 +38,8 @@ var player_one = Player{
     },
     .color = rl.RED,
 };
-var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-const allocator = gpa.allocator();
-var bullet_array: []entity.Entity = none;
-//defer allocator.free(bullet_array);
 
 pub fn init_player() void {
-    bullet_array: []entity.Entity = try allocator.alloc(entity.Entity, MAX_BULLETS);
     player_one = Player{
         .ship_height = SHIP_HEIGHT,
         .gun_length = 15,
@@ -84,10 +79,9 @@ pub fn render_player() void {
     rl.DrawLineEx(v_gun_center_base, v_gun_center_distal, 3, rl.BLUE);
 }
 
-pub fn render_bullets() void {
-
+pub fn render_bullets(bullets: []entity.Entity) void {
     // DRAW THE BULLETS
-    for (bullet_array) |bullet| {
+    for (bullets) |bullet| {
         if (bullet.bullet_type == entity.Entity_Type.none) {
             continue;
         }
@@ -98,7 +92,7 @@ pub fn render_bullets() void {
     }
 }
 
-pub fn controller_player() void {
+pub fn controller_player(bullets: []entity.Entity) void {
     if (rl.IsGamepadAvailable(0)) {} else {
         std.debug.print("gamepad not available.", .{});
     }
@@ -140,13 +134,13 @@ pub fn controller_player() void {
         player_one.color = rl.GREEN;
     }
     if (rl.IsKeyDown(rl.KeyboardKey.KEY_SPACE)) {
-        //for (bullet_array) |bullet| {
-        //    // Gen bullet
-        //    if (bullet.bullet_type == Entity_Type.none) {
-        //        // TODO(Jon): Generate the bullet.
+        for (bullets) |bullet| {
+            // Gen bullet
+            if (bullet.bullet_type == entity.Entity_Type.none) {
+                // TODO(Jon): Generate the bullet.
 
-        //    }
-        //}
+            }
+        }
     }
 
     var keyboard_x_input: f32 = 0.0;

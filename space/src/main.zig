@@ -24,6 +24,12 @@ pub fn main() anyerror!void {
     rl.SetTargetFPS(60); // Set our game to run at 60 frames-per-second
     //--------------------------------------------------------------------------------------
 
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    const allocator = gpa.allocator();
+    //var bullet_array: []entity.Entity = none;
+    var bullet_array: []entity.Entity = try allocator.alloc(entity.Entity, player.MAX_BULLETS);
+    defer allocator.free(bullet_array);
+
     // Main game loop
     while (!rl.WindowShouldClose()) { // Detect window close button or ESC key
         // Update
@@ -31,7 +37,7 @@ pub fn main() anyerror!void {
         // TODO: Update your variables here
         //----------------------------------------------------------------------------------
         //----------------------------------------------------------------------------------
-        player.controller_player();
+        player.controller_player(bullet_array);
 
 
         // Draw
@@ -47,7 +53,7 @@ pub fn main() anyerror!void {
         rl.DrawText("Congrats! You created your first window!", 190, 200, 20, rl.LIGHTGRAY);
 
         player.render_player();
-        player.render_bullets();
+        player.render_bullets(bullet_array);
 
         // Debug
         // GAME PAD DEBUG--------------------------------------------------------------------------------
