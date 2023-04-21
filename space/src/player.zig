@@ -19,6 +19,9 @@ const Player = struct {
     gun_rotation: f32,
     collider: rl.Vector3, // The collider will be a cirlce, x, y position, and z is the radius.
     color: rl.Color,
+    gun_1_pos: rl.Vector2,
+    gun_2_pos: rl.Vector2,
+    gun_3_pos: rl.Vector2,
 };
 
 var player_one = Player{
@@ -37,6 +40,9 @@ var player_one = Player{
         .z = 12,
     },
     .color = rl.RED,
+    .gun_1_pos = rl.Vector2{ .x = 0.0, .y = 0.0 },
+    .gun_2_pos = rl.Vector2{ .x = 0.0, .y = 0.0 },
+    .gun_3_pos = rl.Vector2{ .x = 0.0, .y = 0.0 },
 };
 
 pub fn init_player() void {
@@ -60,28 +66,38 @@ pub fn init_player() void {
 }
 
 pub fn render_player() void {
+    // The 3 points of the player triangle.
+    // TODO: Turn all this into a update funciton?
     const v1_front = rl.Vector2{ .x = player_one.position.x + @sin(player_one.rotation) * (player_one.ship_height), .y = player_one.position.y - @cos(player_one.rotation) * (player_one.ship_height) };
     const v2_left = rl.Vector2{ .x = player_one.position.x - @cos(player_one.rotation) * (player_one.ship_height / 3), .y = player_one.position.y - @sin(player_one.rotation) * (player_one.ship_height / 3) };
     const v3_right = rl.Vector2{ .x = player_one.position.x + @cos(player_one.rotation) * (player_one.ship_height / 3), .y = player_one.position.y + @sin(player_one.rotation) * (player_one.ship_height / 3) };
 
+    // Make a new temp variable for the center point for the two rear guns
     const v_rear_gun_center_point = rl.Vector2{ .x = player_one.position.x + @sin(player_one.rotation) * (player_one.ship_height / 6), .y = player_one.position.y - @cos(player_one.rotation) * (player_one.ship_height / 6) };
 
+    // The point for the base of all 3 guns
     const v_gun_center_base = rl.Vector2{ .x = player_one.position.x + @sin(player_one.rotation) * (player_one.ship_height / 2), .y = player_one.position.y - @cos(player_one.rotation) * (player_one.ship_height / 2) };
     const v_gun_rear_1_base = rl.Vector2{ .x = v_rear_gun_center_point.x - @cos(player_one.rotation) * (player_one.ship_height / 5), .y = v_rear_gun_center_point.y - @sin(player_one.rotation) * (player_one.ship_height / 5) };
     const v_gun_rear_2_base = rl.Vector2{ .x = v_rear_gun_center_point.x + @cos(player_one.rotation) * (player_one.ship_height / 5), .y = v_rear_gun_center_point.y + @sin(player_one.rotation) * (player_one.ship_height / 5) };
 
-    const v_gun_center_distal = rl.Vector2{ .x = v_gun_center_base.x + @cos(player_one.gun_rotation) * player_one.gun_length, .y = v_gun_center_base.y + @sin(player_one.gun_rotation) * player_one.gun_length };
-    const v_gun_rear_1_distal = rl.Vector2{ .x = v_gun_rear_1_base.x + @cos(player_one.gun_rotation) * player_one.gun_length, .y = v_gun_rear_1_base.y + @sin(player_one.gun_rotation) * player_one.gun_length };
-    const v_gun_rear_2_distal = rl.Vector2{ .x = v_gun_rear_2_base.x + @cos(player_one.gun_rotation) * player_one.gun_length, .y = v_gun_rear_2_base.y + @sin(player_one.gun_rotation) * player_one.gun_length };
+    // The ends of all 3 guns
+    const v_gun_1_end_center = rl.Vector2{ .x = v_gun_center_base.x + @cos(player_one.gun_rotation) * player_one.gun_length, .y = v_gun_center_base.y + @sin(player_one.gun_rotation) * player_one.gun_length };
+    const v_gun_2_end_port = rl.Vector2{ .x = v_gun_rear_1_base.x + @cos(player_one.gun_rotation) * player_one.gun_length, .y = v_gun_rear_1_base.y + @sin(player_one.gun_rotation) * player_one.gun_length };
+    const v_gun_3_end_stbd = rl.Vector2{ .x = v_gun_rear_2_base.x + @cos(player_one.gun_rotation) * player_one.gun_length, .y = v_gun_rear_2_base.y + @sin(player_one.gun_rotation) * player_one.gun_length };
+    // Assign the end points for the ungs
+    player_one.gun_1_pos = v_gun_1_end_center;
+    player_one.gun_2_pos = v_gun_2_end_port;
+    player_one.gun_3_pos = v_gun_3_end_stbd;
+    // Begin Drawing
     rl.DrawTriangle(v1_front, v2_left, v3_right, player_one.color);
-    rl.DrawLineEx(v_gun_rear_1_base, v_gun_rear_1_distal, 3, rl.GREEN);
-    rl.DrawLineEx(v_gun_rear_2_base, v_gun_rear_2_distal, 3, rl.BLACK);
-    rl.DrawLineEx(v_gun_center_base, v_gun_center_distal, 3, rl.BLUE);
+    rl.DrawLineEx(v_gun_center_base, v_gun_1_end_center, 3, rl.BLUE);
+    rl.DrawLineEx(v_gun_rear_1_base, v_gun_2_end_port, 3, rl.GREEN);
+    rl.DrawLineEx(v_gun_rear_2_base, v_gun_3_end_stbd, 3, rl.BLACK);
 }
 
 pub fn render_bullets(bullets: []entity.Entity) void {
     // DRAW THE BULLETS
-    for (bullets) |bullet| {
+    for (bullets) |*bullet| {
         if (bullet.bullet_type == entity.Entity_Type.none) {
             continue;
         }
@@ -91,6 +107,12 @@ pub fn render_bullets(bullets: []entity.Entity) void {
         }
     }
 }
+
+fn controller_inputs(controller: i8) void {
+    _ = controller;
+}
+
+fn keyboard_inputs() void {}
 
 pub fn controller_player(bullets: []entity.Entity) void {
     if (rl.IsGamepadAvailable(0)) {} else {
@@ -113,7 +135,20 @@ pub fn controller_player(bullets: []entity.Entity) void {
     if (rl.IsGamepadButtonDown(0, rl.GamepadButton.GAMEPAD_BUTTON_LEFT_FACE_LEFT)) {}
     if (rl.IsGamepadButtonDown(0, rl.GamepadButton.GAMEPAD_BUTTON_LEFT_FACE_RIGHT)) {}
     if (rl.IsGamepadButtonDown(0, rl.GamepadButton.GAMEPAD_BUTTON_LEFT_TRIGGER_1)) {}
-    if (rl.IsGamepadButtonDown(0, rl.GamepadButton.GAMEPAD_BUTTON_RIGHT_TRIGGER_1)) {}
+    if (rl.IsGamepadButtonDown(0, rl.GamepadButton.GAMEPAD_BUTTON_RIGHT_TRIGGER_2)) {
+        player_one.color = rl.YELLOW;
+        for (bullets) |*bullet| {
+            // Gen bullet
+            if (bullet.bullet_type == entity.Entity_Type.none) {
+                bullet.position = player_one.gun_1_pos;
+                bullet.rotation = player_one.gun_rotation;
+                bullet.speed.x = 2.0 * @sin(player_one.rotation) * player_one.speed_scale;
+                bullet.speed.y = 2.0 * @cos(player_one.rotation) * player_one.speed_scale;
+                bullet.bullet_type = entity.Entity_Type.normal_bullet;
+                break;
+            }
+        }
+    }
 
     // Left
     var gamepad_axis_LX: f32 = rl.GetGamepadAxisMovement(0, 0);
@@ -134,11 +169,15 @@ pub fn controller_player(bullets: []entity.Entity) void {
         player_one.color = rl.GREEN;
     }
     if (rl.IsKeyDown(rl.KeyboardKey.KEY_SPACE)) {
-        for (bullets) |bullet| {
+        for (bullets) |*bullet| {
             // Gen bullet
             if (bullet.bullet_type == entity.Entity_Type.none) {
-                // TODO(Jon): Generate the bullet.
-
+                bullet.position = player_one.gun_1_pos;
+                bullet.rotation = player_one.gun_rotation;
+                bullet.speed.x = 2.0 * @sin(player_one.rotation) * player_one.speed_scale;
+                bullet.speed.y = 2.0 * @cos(player_one.rotation) * player_one.speed_scale;
+                bullet.bullet_type = entity.Entity_Type.normal_bullet;
+                break;
             }
         }
     }

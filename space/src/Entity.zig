@@ -1,6 +1,6 @@
 const rl = @import("raylib");
 
-pub const Entity_Type = enum {
+pub const Entity_Type = enum(u8) {
     none,
     normal_bullet,
 };

@@ -27,7 +27,7 @@ pub fn main() anyerror!void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const allocator = gpa.allocator();
     //var bullet_array: []entity.Entity = none;
-    var bullet_array: []entity.Entity = try allocator.alloc(entity.Entity, player.MAX_BULLETS);
+    const bullet_array: []entity.Entity = try allocator.alloc(entity.Entity, player.MAX_BULLETS);
     defer allocator.free(bullet_array);
 
     // Main game loop
@@ -38,7 +38,6 @@ pub fn main() anyerror!void {
         //----------------------------------------------------------------------------------
         //----------------------------------------------------------------------------------
         player.controller_player(bullet_array);
-
 
         // Draw
         //----------------------------------------------------------------------------------
