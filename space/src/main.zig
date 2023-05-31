@@ -24,11 +24,25 @@ pub fn main() anyerror!void {
     rl.SetTargetFPS(60); // Set our game to run at 60 frames-per-second
     //--------------------------------------------------------------------------------------
 
+    const ArrayList = std.ArrayList;
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const allocator = gpa.allocator();
-    //var bullet_array: []entity.Entity = none;
-    const bullet_array: []entity.Entity = try allocator.alloc(entity.Entity, player.MAX_BULLETS);
-    defer allocator.free(bullet_array);
+    var bullet_array = ArrayList(entity.Entity).init(allocator);
+    var test_bullet_array: []entity.Entity = allocator.alloc(entity.Entity, 10);
+
+    var i: u16 = 0;
+    var k: f32 = 0.0;
+    while (i < 10) {
+        //bullet_array.append(entity.Entity);
+        //bullet_array[i].bullet_type = entity.Entity_Type.normal_bullet;
+        //bullet_array[i].position = rl.Vector2{ .x = 5 * i, .y = 5 * i };
+        //bullet_array[i].size = 5.0;
+        test_bullet_array[i].bullet_type = entity.Entity_Type.normal_bullet;
+        test_bullet_array[i].position = rl.Vector2{ .x = 5 * k, .y = 5 * k };
+        test_bullet_array[i].size = 5.0;
+        k += 1.0;
+        i += 1;
+    }
 
     // Main game loop
     while (!rl.WindowShouldClose()) { // Detect window close button or ESC key

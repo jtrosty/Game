@@ -13,6 +13,7 @@ raylib-zig/
 zig-cache/
 zig-out/
 .vs/
+game2/raylib
 
 # Compiled Object files
 *.slo

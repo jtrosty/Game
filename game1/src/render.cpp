@@ -41,7 +41,7 @@ void Render::drawUnitCard(Tile& tile) {
     int spacing = 15;
     int vertSpacing = 10;
     int cardFontSize = 5;
-    assert(tile.hasUnit == 1);
+    //assert(tile.hasUnit == 1);
     UnitData u = *(tile.unit);
     DrawRectangleRoundedLines(tile.rec, 2.0, 2, 2.0, BLACK);
 
