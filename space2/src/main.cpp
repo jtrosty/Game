@@ -1,4 +1,6 @@
 #include "raylib.h"
+#define AYGUI_IMPLEMENTATION
+#include "raygui.h"
 
 int main(void)
 {
