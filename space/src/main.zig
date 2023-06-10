@@ -28,7 +28,6 @@ pub fn main() anyerror!void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const allocator = gpa.allocator();
     var bullet_array = ArrayList(entity.Entity).init(allocator);
-    var test_bullet_array: []entity.Entity = allocator.alloc(entity.Entity, 10);
 
     var i: u16 = 0;
     var k: f32 = 0.0;
