@@ -2,3 +2,10 @@ TODOs
 1. Check on f32 and float and real32, what is going on there. 
 2. Check on bool32, seems like a waste, maybe has to do with controller situation. 
 3. WTF is rewind in main?
+
+
+Guide
+Types: Upper_Case_With_Under_Score
+variables: under_case_with_under_score
+functions: camelCaseBaby
+Constants: THIS_IS_CONSTANT

@@ -61,10 +61,10 @@ struct OSX_Game_Memory {
 //struct mac_game_controller
 struct OSX_Game_Controller
 {
-    uint32 left_button_usage_ID;
-    uint32 top_button_usage_ID;
-    uint32 bottom_button_usage_ID;
-    uint32 right_button_usage_ID;
+    uint32 left_action_usage_ID;
+    uint32 top_action_usage_ID;
+    uint32 bottom_ation_usage_ID;
+    uint32 right_action_usage_ID;
     uint32 left_shoulder_button_usage_ID;
     uint32 right_shoulder_button_usage_ID;
 
@@ -83,7 +83,6 @@ struct OSX_Game_Controller
     
     i32 d_pad_x;
     i32 d_pad_y;
-
 };
 
 struct OSX_SoundOutput

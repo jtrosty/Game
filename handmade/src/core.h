@@ -103,7 +103,7 @@ struct Game_Controller_Input
         Game_Button_State buttons[12];
         struct
         {
-            Game_Button_State bove_up;
+            Game_Button_State mbove_up;
             Game_Button_State move_down;
             Game_Button_State move_left;
             Game_Button_State move_right;
