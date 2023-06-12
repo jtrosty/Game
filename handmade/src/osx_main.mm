@@ -61,7 +61,7 @@ macBuildAppPathFilename(OSX_AppPath *path, char* filename, uint32 dest_count, ch
 
 // NOTE: (Ted)  Not sure how this performs when the app directory is a symbolic link
 static void
-macBuilAppFilePath(OSX_AppPath *path)
+macBuildAppFilePath(OSX_AppPath *path)
 {
     uint32 buffer_size = sizeof(path->filename);
     if (_NSGetExecutablePath(path->filename, &buffer_size) == 0)
@@ -90,17 +90,19 @@ DEBUG_PLATFORM_FREE_FILE_MEMORY(DEBUGPlatformFreeFileMemory)
 DEBUG_PLATFORM_READ_ENTIRE_FILE(DEBUGPlatformReadEntireFile)
 {
     // TODO: (Jon) get this struct
-    debug_read_file_result result = {};
+    Debug_Read_File_Result result = {};
 
     OSX_AppPath path = {};
-    MacBuildAppFilePath(&path);
+    macBuildAppFilePath(&path);
 
     // NOTE: (Ted)  This is the file location in the bundle.
     char bundle_filename[MAC_MAX_FILENAME_SIZE];
     char local_filename[MAC_MAX_FILENAME_SIZE];
 
+    /*
     // TODO: (Ted)  Put all of this into our own string functions.
-    sprintf(local_filename, "Contents/Resources/%s", filename);
+    printf(local_filename, "Contents/Resources/%s", filename);
+    */
 
     // Contents/Resources/test_background.bmp
     macBuildAppPathFilename(&path, local_filename,
@@ -130,7 +132,7 @@ DEBUG_PLATFORM_READ_ENTIRE_FILE(DEBUGPlatformReadEntireFile)
                 } else
                 {
                     // TODO: Clean this up. 
-                    DEBUGPlatformFreeFileMemory(result.contents);
+                    //DEBUGPlatformFreeFileMemory(result.contents);
                     result.contents_size = 0;
                 }
             } else
@@ -151,28 +153,28 @@ DEBUG_PLATFORM_READ_ENTIRE_FILE(DEBUGPlatformReadEntireFile)
 
 DEBUG_PLATFORM_WRITE_ENTIRE_FILE(DEBUGPlatformWriteEntireFile)
 {
-    bool32 Result = false;
+    bool32 result = false;
 
     // TODO: Ted    Consider cleaning this up / compressing it?
-    mac_app_path Path = {};
+    OSX_AppPath path = {};
     MacBuildAppFilePath(&Path);
 
     char BundleFilename[MAC_MAX_FILENAME_SIZE];
     char LocalFilename[MAC_MAX_FILENAME_SIZE];
 
-    sprintf(LocalFilename, "Contents/%s", Filename);
+    //sprintf(local_file_name, "Contents/%s", filename);
 
-    MacBuildAppPathFilename(&Path, LocalFilename,
-                            sizeof(BundleFilename), BundleFilename);
+    macBuildAppPathFilename(&path, local_filename,
+                            sizeof(bundle_filename), bundle_filename);
 
-    FILE *FileHandle = fopen(BundleFilename, "w");
+    FILE* file_handle = fopen(bundle_Filename, "w");
 
-    if (FileHandle)
+    if (file_handle)
     {
-        uint64 BytesWritten = fwrite(Memory, 1, FileSize, FileHandle);
-        if (BytesWritten == FileSize)
+        uint64 bytes_written = fwrite(memory, 1, file_size, file_handle);
+        if (bytes_written == file_size)
         {
-            Result = true;
+            result = true;
         } else
         {
             // TODO: Log this.
@@ -182,7 +184,7 @@ DEBUG_PLATFORM_WRITE_ENTIRE_FILE(DEBUGPlatformWriteEntireFile)
         // TODO: Log this
     }
 
-    return Result;
+    return result;
 }
 #endif
 

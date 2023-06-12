@@ -30,7 +30,7 @@ typedef double real64;
 
 #if HANDMADE_SLOW
 // TODO(casey): Complete assertion macro - don't worry everyone!
-#define Assert(Expression) if(!(Expression)) {*(int *)0 = 0;}
+#define Assert(Expression) if(!(Expression)) {*(int*)0 = 0;}
 #else
 #define Assert(Expression)
 #endif
@@ -136,7 +136,7 @@ struct Game_Input
 };
 inline Game_Controller_Input* get_controller(Game_Input* input, int unsigned controller_index)
 {
-    Assert(controller_index < ArrayCount(Input->Controllers));
+    Assert(controller_index < ArrayCount(input->controllers));
     
     Game_Controller_Input* result = &input->controllers[controller_index];
     return(result);

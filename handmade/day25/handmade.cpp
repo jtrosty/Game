@@ -103,7 +103,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     {
         char *Filename = __FILE__;
         
-        debug_read_file_result File = Memory->DEBUGPlatformReadEntireFile(Thread, Filename);
+        debug_read_file_result File = memory->DEBUGPlatformReadEntireFile(Thread, Filename);
         if(File.Contents)
         {
             Memory->DEBUGPlatformWriteEntireFile(Thread, "test.out", File.ContentsSize, File.Contents);

@@ -4,8 +4,7 @@
 //#include "../cpp/code/handmade.h"
 #include <stdint.h>
 #include <stdio.h>
-#include <core.h>
-#include <core.h>
+#include "core.h"
 
 typedef uint8_t u8;
 typedef uint16_t u16;

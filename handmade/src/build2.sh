@@ -23,22 +23,16 @@ DISABLED_WARNINGS="-Wno-old-style-cast
                    -Wno-unused-parameter
                    -Wno-pedantic
                    -Wno-missing-prototypes
-                   -Wno-null-dereference
+                   -Wno-deprecated-declarations
                    -Wno-nullable-to-nonnull-conversion
                    -Wno-c++11-long-long
-                   -Wno-poison-system-directories
-                   -Wno-sign-conversion
-                   -Wno-cast-align
-                   -Wno-sign-compare
-                   -Wno-c++11-compat-deprecated-writable-strings"
-
+                   -Wno-poison-system-directories"
 
                    
 
 COMMON_COMPILER_FLAGS="$COMPILER_WARNING_FLAGS 
                        $DISABLED_WARNINGS 
                        -DHANDMADE_INTERNAL=1 
-                       -DHANDMADE_SLOW=1 
                        $INCLUDED_FRAMEWORKS"
 
 mkdir build

@@ -34,12 +34,12 @@ renderWeirdGradient(Game_Offscreen_Buffer* buffer, int blue_offset, int green_of
 {
     // TODO(casey): Let's see what the optimizer does
 
-    uint8 *row = (uint8 *)buffer->memory;    
+    uint8 *row = (uint8*)buffer->memory;    
     for(int y = 0;
         y < buffer->height;
         ++y)
     {
-        uint32 *pixel = (uint32*)row;
+        uint32* pixel = (uint32*)row;
         for(int x = 0;
             x < buffer->width;
             ++x)
