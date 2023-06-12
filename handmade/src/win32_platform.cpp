@@ -9,7 +9,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow)
 {
     // Register the window class.
-    const wchar_t CLASS_NAME[]  = L"Sample Window Class";
+    const wchar_t CLASS_NAME[]  = L"Core Game Trost";
     
     WNDCLASS wc = { };
 
@@ -24,7 +24,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
     HWND hwnd = CreateWindowEx(
         0,                              // Optional window styles.
         CLASS_NAME,                     // Window class
-        L"Learn to Program Windows",    // Window text
+        L"Trost Core GAme",    // Window text
         WS_OVERLAPPEDWINDOW,            // Window style
 
         // Size and position
