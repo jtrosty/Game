@@ -6,11 +6,13 @@
 */
 
 #include <windows.h>
+#include <Xinput.h>
 #include "core.h"
 
 struct Render_Buffer {
     int width;
     int height;
+    int num_of_pixels;
     u32* pixels;
     BITMAPINFO bitmap_info;
 };
@@ -20,10 +22,24 @@ global_variable char RUNNING = 1;
 
 static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
+static void render_gradient(int x_offset) {
+    for (int i = 0; i < render_buffer.num_of_pixels; i++) {
+        render_buffer.pixels[i] = 0xFF0000ff + x_offset++;
+        // 0xFF000000 black
+        // 0xFFFF0000 orange maybe red
+        // 0x00FF0000 red
+        // 0x0000FF00 green
+        // 0x000000FF blue
+
+    }
+}
+
 int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
     // Register the window class.
     //const wchar_t CLASS_NAME[]  = L"Core Game Trost";
+    // REMOVE
+    int DEBUF_X_OFFSET = 0;
     
     WNDCLASSA window_class = {0};
     window_class.style = CS_HREDRAW|CS_VREDRAW;
@@ -37,8 +53,8 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 
     //Win32ResizeDIBSection(&GlobalBackbuffer, 1280, 720);
     
-    const int INITIAL_WINDOW_X = 200;
-    const int INITIAL_WINDOW_Y = 200;
+    const int INITIAL_WINDOW_X = 1280;
+    const int INITIAL_WINDOW_Y = 720;
 
     HWND window = CreateWindowExA(
         0,                                  // Optional window styles.
@@ -59,41 +75,54 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 
     HDC hdc = GetDC(window);
 
+    /*
+    render_buffer.width = INITIAL_WINDOW_X;
+    render_buffer.height = INITIAL_WINDOW_Y;
+    render_buffer.num_of_pixels = INITIAL_WINDOW_X * INITIAL_WINDOW_Y;
+    */
 
-    int num_of_pixels = INITIAL_WINDOW_X * INITIAL_WINDOW_Y;
-
-    render_buffer.height = INITIAL_WINDOW_X;
-    render_buffer.width = INITIAL_WINDOW_Y;
-
-    render_buffer.pixels = (u32*)VirtualAlloc(0, sizeof(32) * render_buffer.height * render_buffer.width,
-                                        MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
-
-    for (int i = 0; i < num_of_pixels; i++) {
-        render_buffer.pixels[i] = 0xFFFF0000;
-    }
-
-    render_buffer.bitmap_info.bmiHeader.biBitCount = sizeof(render_buffer.bitmap_info.bmiHeader);
-    render_buffer.bitmap_info.bmiHeader.biWidth = INITIAL_WINDOW_X;
-    render_buffer.bitmap_info.bmiHeader.biHeight = INITIAL_WINDOW_Y;
-    render_buffer.bitmap_info.bmiHeader.biPlanes = 1; // Must be set to 1
-    render_buffer.bitmap_info.bmiHeader.biBitCount = 32; // 32 bits per pixel
-    render_buffer.bitmap_info.bmiHeader.biCompression = BI_RGB; // Uncompressed
-    render_buffer.bitmap_info.bmiHeader.biSizeImage = 0; // 0 for uncompressed
-    render_buffer.bitmap_info.bmiHeader.biXPelsPerMeter = 0; // Not needed
-    render_buffer.bitmap_info.bmiHeader.biYPelsPerMeter = 0; // Not needed
-    render_buffer.bitmap_info.bmiHeader.biClrUsed = 0; // Not needed, this gets us the maximum amount of colors.
-    render_buffer.bitmap_info.bmiHeader.biClrImportant = 0; // All colors are important.
-
-    // TODO: ??
-    //ShowWindow(window, nCmdShow);
 
     // Run the message loop.
     while (RUNNING) {
-        MSG msg = { };
-        while (GetMessage(&msg, NULL, 0, 0) > 0)
+
+        DWORD dwResult;    
+        for (DWORD i=0; i< XUSER_MAX_COUNT; i++ )
         {
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
+            XINPUT_STATE state;
+            ZeroMemory( &state, sizeof(XINPUT_STATE) );
+
+            // Simply get the state of the controller from XInput.
+            dwResult = XInputGetState( i, &state );
+
+            if( dwResult == ERROR_SUCCESS )
+            {
+                // Controller is connected
+                if (state.Gamepad.wButtons = 0x0100) {
+                    // A is down
+                    DEBUF_X_OFFSET += 20;
+                }
+            }
+            else
+            {
+                // Controller is not connected
+            }
+        }
+        MSG msg;
+        while (PeekMessageA(&msg, window, 0, 0, PM_REMOVE) > 0)
+        {
+            switch (msg.message) {
+                case WM_SYSKEYDOWN:
+                case WM_SYSKEYUP:
+                case WM_KEYDOWN:
+                case WM_KEYUP: {
+
+                    break;
+                }
+                default: {
+                    TranslateMessage(&msg);
+                    DispatchMessage(&msg);
+                }
+            }
         }
 
         // Render 
@@ -108,35 +137,64 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
             DIB_RGB_COLORS,                     // iUsage,
             SRCCOPY                             // rop
         );
+
+        render_gradient(DEBUF_X_OFFSET);
     }
 
     return 0;
 }
 
-static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+static LRESULT CALLBACK WindowProc(HWND window, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
+    LRESULT result = 0;
+
     switch (uMsg)
     {
-    case WM_DESTROY:
-        PostQuitMessage(0);
-        RUNNING = 0;
-        return 0;
+        case WM_DESTROY: {
+            PostQuitMessage(0);
+            RUNNING = 0;
+        } break;
+        case WM_SIZE: {
+            RECT rect;
+            GetClientRect(window, &rect);
+            render_buffer.width = rect.right - rect.left;
+            render_buffer.height = rect.bottom - rect.top;
+            render_buffer.num_of_pixels = render_buffer.width * render_buffer.height;
 
-    case WM_PAINT:
-        {
-            /*
-            PAINTSTRUCT ps;
-            HDC hdc = BeginPaint(hwnd, &ps);
+            if (render_buffer.pixels) {
+                VirtualFree(render_buffer.pixels, 0, MEM_RELEASE);
+            }
+            render_buffer.pixels = (u32*)VirtualAlloc(0, sizeof(u32) * render_buffer.num_of_pixels, 
+                                                MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
 
-            // All painting occurs here, between BeginPaint and EndPaint.
+            render_buffer.bitmap_info.bmiHeader.biSize = sizeof(render_buffer.bitmap_info.bmiHeader);
+            render_buffer.bitmap_info.bmiHeader.biWidth = render_buffer.width;
+            render_buffer.bitmap_info.bmiHeader.biHeight = render_buffer.height;
+            render_buffer.bitmap_info.bmiHeader.biPlanes = 1; // Must be set to 1
+            render_buffer.bitmap_info.bmiHeader.biBitCount = 32; // 32 bits per pixel
+            render_buffer.bitmap_info.bmiHeader.biCompression = BI_RGB; // Uncompressed
+            render_buffer.bitmap_info.bmiHeader.biSizeImage = 0; // 0 for uncompressed
+            render_buffer.bitmap_info.bmiHeader.biXPelsPerMeter = 0; // Not needed
+            render_buffer.bitmap_info.bmiHeader.biYPelsPerMeter = 0; // Not needed
+            render_buffer.bitmap_info.bmiHeader.biClrUsed = 0; // Not needed, this gets us the maximum amount of colors.
+            render_buffer.bitmap_info.bmiHeader.biClrImportant = 0; // All colors are important.
+        } break;
+        case WM_PAINT:
+            {
+                /*
+                PAINTSTRUCT ps;
+                HDC hdc = BeginPaint(hwnd, &ps);
 
-            FillRect(hdc, &ps.rcPaint, (HBRUSH) (COLOR_WINDOW+1));
+                // All painting occurs here, between BeginPaint and EndPaint.
 
-            EndPaint(hwnd, &ps);
-            */
+                FillRect(hdc, &ps.rcPaint, (HBRUSH) (COLOR_WINDOW+1));
+
+                EndPaint(hwnd, &ps);
+                */
+            }
+        default: {
+            result = DefWindowProcA(window, uMsg, wParam, lParam);
         }
-        return 0;
-
     }
-    return DefWindowProcA(hwnd, uMsg, wParam, lParam);
+    return result;
 }
