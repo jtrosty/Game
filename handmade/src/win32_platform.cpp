@@ -22,6 +22,42 @@ global_variable char RUNNING = 1;
 
 static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
+// Xinput Get State
+// This makes name represetn the funciton address on the right
+#define X_INPUT_GET_STATE(name) DWORD WINAPI name(DWORD dw_user_index, XINPUT_STATE* p_state)
+// This then 
+typedef X_INPUT_GET_STATE(X_Input_Get_State);
+X_INPUT_GET_STATE(xInputGetStateStub) {
+    return (ERROR_DEVICE_NOT_CONNECTED);
+}
+global_variable X_Input_Get_State* x_input_get_state_ = xInputGetStateStub;
+#define XInputGetState x_input_get_state_
+
+// Xinput Set State
+#define X_INPUT_SET_STATE(name) DWORD WINAPI name(DWORD dw_user_index, XINPUT_VIBRATION* p_vibration)
+typedef X_INPUT_SET_STATE(X_Input_Set_State);
+X_INPUT_SET_STATE(xInputSetStateStub) {
+    return (ERROR_DEVICE_NOT_CONNECTED);
+}
+global_variable X_Input_Set_State* x_input_set_state_ = xInputSetStateStub;
+#define XInputSetState x_input_set_state_
+
+static void win32LoadXInput(void) {
+    HMODULE x_input_library = LoadLibraryA("xinput1_4.dll");
+    if (!x_input_library) {
+        x_input_library = LoadLibraryA("xinput9_1_0.dll");
+    }
+    if (!x_input_library) {
+        x_input_library = LoadLibraryA("xinput1_3.dll");
+    }
+    if (!x_input_library) {
+        XInputGetState = (X_Input_Get_State*)GetProcAddress(x_input_library, "XInputGetState");
+        if (!XInputGetState) {XInputGetState = xInputGetStateStub;}
+        XInputSetState = (X_Input_Set_State*)GetProcAddress(x_input_library, "XInputSetState");
+        if (!XInputSetState) {XInputSetState = xInputSetStateStub;}
+    }
+}
+
 static void render_gradient(int x_offset) {
     for (int i = 0; i < render_buffer.num_of_pixels; i++) {
         render_buffer.pixels[i] = 0xFF0000ff + x_offset++;
@@ -81,6 +117,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     render_buffer.num_of_pixels = INITIAL_WINDOW_X * INITIAL_WINDOW_Y;
     */
 
+   win32LoadXInput();
 
     // Run the message loop.
     while (RUNNING) {
