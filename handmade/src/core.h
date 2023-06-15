@@ -136,7 +136,7 @@ struct Game_Input
     // TODO(casey): Insert clock values here.    
     Game_Controller_Input controllers[5];
 };
-inline Game_Controller_Input* get_controller(Game_Input* input, int unsigned controller_index)
+inline Game_Controller_Input* getController(Game_Input* input, int unsigned controller_index)
 {
     Assert(controller_index < ArrayCount(input->controllers));
     

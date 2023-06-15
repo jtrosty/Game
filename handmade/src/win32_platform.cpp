@@ -3,11 +3,21 @@
 #ifndef UNICODE
 #define UNICODE
 #endif 
+
+/*
+    Gamepad basics: done 15 june
+    Keyboard: 
+    Sound
+    frame rate
+    saved last 20 secs
+    tile map
 */
 
 #include <windows.h>
 #include <Xinput.h>
+#include <dsound.h>
 #include "core.h"
+#include "win32_platform.h"
 
 struct Render_Buffer {
     int width;
@@ -21,8 +31,15 @@ global_variable Render_Buffer render_buffer = {0};
 global_variable char RUNNING = 1;
 
 static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+static void win32ProcessPendingMessage(Game_Controller_Input* keyboard_controller);
+static void win32LoadXInput(void);
+static void win32_process_x_input_button(DWORD x_input_state, Game_Button_State* old_state, 
+                                         DWORD button_bit, Game_Button_State* new_state);
+static real32 win32_process_x_input_stick(SHORT value, SHORT dead_zone_threshold);
+static void win32_process_keyboard_message(Game_Button_State* new_state, bool32 is_down);
 
-// Xinput Get State
+
+// Xinput Get State /////////////////////////////////////////////////////////////
 // This makes name represetn the funciton address on the right
 #define X_INPUT_GET_STATE(name) DWORD WINAPI name(DWORD dw_user_index, XINPUT_STATE* p_state)
 // This then 
@@ -50,11 +67,35 @@ static void win32LoadXInput(void) {
     if (!x_input_library) {
         x_input_library = LoadLibraryA("xinput1_3.dll");
     }
-    if (!x_input_library) {
+    if (x_input_library) {
         XInputGetState = (X_Input_Get_State*)GetProcAddress(x_input_library, "XInputGetState");
         if (!XInputGetState) {XInputGetState = xInputGetStateStub;}
         XInputSetState = (X_Input_Set_State*)GetProcAddress(x_input_library, "XInputSetState");
         if (!XInputSetState) {XInputSetState = xInputSetStateStub;}
+    }
+}
+
+static void win32_process_x_input_button(DWORD x_input_state, Game_Button_State* old_state, 
+                                         DWORD button_bit, Game_Button_State* new_state) {
+    new_state->ended_down = ((x_input_state & button_bit) == button_bit);
+    new_state->half_transition_count = (old_state->ended_down != new_state->ended_down) ? 1 : 0;
+}
+
+static real32 win32_process_x_input_stick(SHORT value, SHORT dead_zone_threshold) {
+    real32 result = 0.0f;
+    if (value < -dead_zone_threshold) {
+        result = (real32)((value + dead_zone_threshold) / (32768.0f - dead_zone_threshold));
+    }
+    else if (value > dead_zone_threshold) {
+        result = (real32)((value - dead_zone_threshold) / (32768.0f - dead_zone_threshold));
+    }
+    return result;
+}
+
+static void win32_process_keyboard_message(Game_Button_State* new_state, bool32 is_down){
+    if (new_state->ended_down != is_down) {
+        new_state->ended_down = is_down;
+        ++new_state->half_transition_count;
     }
 }
 
@@ -66,7 +107,6 @@ static void render_gradient(int x_offset) {
         // 0x00FF0000 red
         // 0x0000FF00 green
         // 0x000000FF blue
-
     }
 }
 
@@ -118,30 +158,80 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     */
 
    win32LoadXInput();
+   Game_Input input[2] = {};
+   Game_Input* new_input = &input[0];
+   Game_Input* old_input = &input[1];
+
+    Game_Controller_Input* new_controller = getController(new_input, 0);
+    Game_Controller_Input* old_controller = getController(old_input, 0);
 
     // Run the message loop.
     while (RUNNING) {
 
+
         DWORD dwResult;    
-        for (DWORD i=0; i< XUSER_MAX_COUNT; i++ )
+        for (DWORD controller_index = 0; controller_index < XUSER_MAX_COUNT; controller_index++ )
         {
-            XINPUT_STATE state;
-            ZeroMemory( &state, sizeof(XINPUT_STATE) );
+            XINPUT_STATE x_input_controller_state;
+            ZeroMemory( &x_input_controller_state, sizeof(XINPUT_STATE));
 
             // Simply get the state of the controller from XInput.
-            dwResult = XInputGetState( i, &state );
+            dwResult = XInputGetState(controller_index, &x_input_controller_state );
 
-            if( dwResult == ERROR_SUCCESS )
+            if(dwResult == ERROR_SUCCESS)
             {
+
+                new_controller->is_connected = true;
+                new_controller->is_analog = old_controller->is_analog;
                 // Controller is connected
-                if (state.Gamepad.wButtons = 0x0100) {
-                    // A is down
-                    DEBUF_X_OFFSET += 20;
-                }
+
+                // Sticks
+                new_controller->left_stick_average_x = win32_process_x_input_stick(
+                    x_input_controller_state.Gamepad.sThumbLX, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE
+                    );
+                new_controller->left_stick_average_y = win32_process_x_input_stick(
+                    x_input_controller_state.Gamepad.sThumbLY, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE
+                    );
+                new_controller->right_stick_average_x = win32_process_x_input_stick(
+                    x_input_controller_state.Gamepad.sThumbRX, XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE
+                    );
+                new_controller->right_stick_average_y = win32_process_x_input_stick(
+                    x_input_controller_state.Gamepad.sThumbRY, XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE
+                    );
+
+
+                // Buttons
+                win32_process_x_input_button(x_input_controller_state.Gamepad.wButtons, &old_controller->action_down, 
+                                             XINPUT_GAMEPAD_A, &new_controller->action_down);
+                win32_process_x_input_button(x_input_controller_state.Gamepad.wButtons, &old_controller->action_left, 
+                                             XINPUT_GAMEPAD_B, &new_controller->action_left);
+                win32_process_x_input_button(x_input_controller_state.Gamepad.wButtons, &old_controller->action_right, 
+                                             XINPUT_GAMEPAD_X, &new_controller->action_right);
+                win32_process_x_input_button(x_input_controller_state.Gamepad.wButtons, &old_controller->action_up, 
+                                             XINPUT_GAMEPAD_Y, &new_controller->action_up);
+                win32_process_x_input_button(x_input_controller_state.Gamepad.wButtons, &old_controller->left_shoulder, 
+                                             XINPUT_GAMEPAD_LEFT_SHOULDER, &new_controller->left_shoulder);
+                win32_process_x_input_button(x_input_controller_state.Gamepad.wButtons, &old_controller->right_shoulder, 
+                                             XINPUT_GAMEPAD_RIGHT_SHOULDER, &new_controller->right_shoulder);
+                win32_process_x_input_button(x_input_controller_state.Gamepad.wButtons, &old_controller->start, 
+                                             XINPUT_GAMEPAD_START, &new_controller->start);
+                win32_process_x_input_button(x_input_controller_state.Gamepad.wButtons, &old_controller->back, 
+                                             XINPUT_GAMEPAD_BACK, &new_controller->back);
             }
             else
             {
                 // Controller is not connected
+                new_controller->is_connected = false;
+            }
+
+            // DEBUG Controlls
+            if (new_controller->left_stick_average_x) {
+                DEBUF_X_OFFSET += (100 * new_controller->left_stick_average_x);
+            }
+
+            if (new_controller->action_down.ended_down) {
+                // A is down
+                DEBUF_X_OFFSET += 100;
             }
         }
         MSG msg;
@@ -179,6 +269,130 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     }
 
     return 0;
+}
+
+static void win32ProcessPendingMessage(Game_Controller_Input* keyboard_controller) {
+    MSG msg;
+    while(PeekMessage(&msg, 0, 0, 0, PM_REMOVE))
+    {
+        switch(msg.message)
+        {
+            case WM_QUIT:
+            {
+                RUNNING = false;
+            } break;
+            
+            case WM_SYSKEYDOWN:
+            case WM_SYSKEYUP:
+            case WM_KEYDOWN:
+            case WM_KEYUP:
+            {
+                uint32 VKCode = (uint32)msg.wParam;
+
+                // NOTE(casey): Since we are comparing WasDown to IsDown,
+                // we MUST use == and != to convert these bit tests to actual
+                // 0 or 1 values.
+                bool32 was_down = ((msg.lParam & (1 << 30)) != 0);
+                bool32 is_down = ((msg.lParam & (1 << 31)) == 0);
+                if(was_down != is_down)
+                {
+                    if(VKCode == 'W')
+                    {
+                        win32_process_keyboard_message(&keyboard_controller->move_up, is_down);
+                    }
+                    else if(VKCode == 'A')
+                    {
+                        win32_process_keyboard_message(&keyboard_controller->move_left, is_down);
+                    }
+                    else if(VKCode == 'S')
+                    {
+                        win32_process_keyboard_message(&keyboard_controller->move_down, is_down);
+                    }
+                    else if(VKCode == 'D')
+                    {
+                        win32_process_keyboard_message(&keyboard_controller->move_right, is_down);
+                    }
+                    else if(VKCode == 'Q')
+                    {
+                        win32_process_keyboard_message(&keyboard_controller->left_shoulder, is_down);
+                    }
+                    else if(VKCode == 'E')
+                    {
+                        win32_process_keyboard_message(&keyboard_controller->right_shoulder, is_down);
+                    }
+                    else if(VKCode == VK_UP)
+                    {
+                        win32_process_keyboard_message(&keyboard_controller->action_up, is_down);
+                    }
+                    else if(VKCode == VK_LEFT)
+                    {
+                        win32_process_keyboard_message(&keyboard_controller->action_left, is_down);
+                    }
+                    else if(VKCode == VK_DOWN)
+                    {
+                        win32_process_keyboard_message(&keyboard_controller->action_down, is_down);
+                    }
+                    else if(VKCode == VK_RIGHT)
+                    {
+                        win32_process_keyboard_message(&keyboard_controller->action_right, is_down);
+                    }
+                    else if(VKCode == VK_ESCAPE)
+                    {
+                        win32_process_keyboard_message(&keyboard_controller->start, is_down);
+                    }
+                    else if(VKCode == VK_SPACE)
+                    {
+                        win32_process_keyboard_message(&keyboard_controller->back, is_down);
+                    }
+                    /*
+#if HANDMADE_INTERNAL
+                    else if(VKCode == 'P')
+                    {
+                        if(IsDown)
+                        {
+                            GlobalPause = !GlobalPause;
+                        }
+                    }
+                    else if(VKCode == 'L')
+                    {
+                        if(IsDown)
+                        {
+                            if(State->InputPlayingIndex == 0)
+                            {
+                                if(State->InputRecordingIndex == 0)
+                                {
+                                    Win32BeginRecordingInput(State, 1);
+                                }
+                                else
+                                {
+                                    Win32EndRecordingInput(State);
+                                    Win32BeginInputPlayBack(State, 1);
+                                }
+                            }
+                            else
+                            {
+                                Win32EndInputPlayBack(State);
+                            }
+                        }
+                    }
+#endif
+*/
+                }
+
+                bool32 alt_key_was_down = (msg.lParam & (1 << 29));
+                if((VKCode == VK_F4) && alt_key_was_down)
+                {
+                    RUNNING = false;
+                }
+            } break;
+
+            default:
+            {
+                TranslateMessage(&msg);
+                DispatchMessageA(&msg);
+            } break;
+        }
+    }
 }
 
 static LRESULT CALLBACK WindowProc(HWND window, UINT uMsg, WPARAM wParam, LPARAM lParam)
