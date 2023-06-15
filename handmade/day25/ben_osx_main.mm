@@ -251,7 +251,7 @@ void ControllerInput(void *context, IOReturn result,
         return;
     }
 
-    mac_game_controller *MacGameController = (mac_game_controller *)context;
+    Mac_Game_Controller* MacGameController = (Mac_Game_Controller*)context;
     
     IOHIDElementRef Element = IOHIDValueGetElement(value);    
     uint32 UsagePage = IOHIDElementGetUsagePage(Element);

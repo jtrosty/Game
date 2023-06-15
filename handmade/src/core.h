@@ -71,7 +71,7 @@ typedef DEBUG_PLATFORM_WRITE_ENTIRE_FILE(debug_platform_write_entire_file);
 struct Game_Offscreen_Buffer
 {
     // NOTE(casey): Pixels are alwasy 32-bits wide, Memory Order BB GG RR XX
-    void *memory;
+    void* memory;
     int width;
     int height;
     int pitch;
@@ -95,15 +95,17 @@ struct Game_Controller_Input
 {
     bool32 is_connected;
     bool32 is_analog;    
-    real32 stick_average_x;
-    real32 stick_average_y;
+    real32 left_stick_average_x;
+    real32 left_stick_average_y;
+    real32 right_stick_average_x;
+    real32 right_stick_average_y;
     
     union
     {
         Game_Button_State buttons[12];
         struct
         {
-            Game_Button_State mbove_up;
+            Game_Button_State move_up;
             Game_Button_State move_down;
             Game_Button_State move_left;
             Game_Button_State move_right;

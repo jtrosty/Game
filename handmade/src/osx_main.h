@@ -59,17 +59,18 @@ struct OSX_Game_Memory {
 // TODO: (Ted) Have a way to specify if controller is analog.
 //struct mac_game_controller
 struct OSX_Game_Controller
+
 {
     uint32 left_action_usage_ID;
     uint32 top_action_usage_ID;
-    uint32 bottom_ation_usage_ID;
+    uint32 bottom_action_usage_ID;
     uint32 right_action_usage_ID;
     uint32 left_shoulder_button_usage_ID;
     uint32 right_shoulder_button_usage_ID;
+    uint32 left_thumb_x_usage_ID;
+    uint32 left_thumb_y_usage_ID;
 
-    uint32 left_thumb_X_usage_ID;
-    uint32 left_thumb_Y_usage_ID;
-
+/*
     bool32 left_button_state;
     bool32 top_button_state;
     bool32 bottom_button_state;
@@ -79,9 +80,15 @@ struct OSX_Game_Controller
 
     real32 left_thumbstick_x;
     real32 left_thumbstick_y;
+    */
     
     i32 d_pad_x;
     i32 d_pad_y;
+};
+
+struct Mac_Game_Controller {
+    OSX_Game_Controller* osx_usage_id; 
+    Game_Controller_Input* game_controller;
 };
 
 struct OSX_SoundOutput

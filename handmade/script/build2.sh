@@ -30,6 +30,7 @@ DISABLED_WARNINGS="-Wno-old-style-cast
                    -Wno-sign-conversion
                    -Wno-cast-align
                    -Wno-sign-compare
+                   -Wno-unused-function
                    -Wno-c++11-compat-deprecated-writable-strings"
 
 

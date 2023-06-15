@@ -86,8 +86,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         if(controller->is_analog)
         {
             // NOTE(casey): Use analog movement tuning
-            game_state->blue_offset += (int)(4.0f*controller->stick_average_x);
-            game_state->tone_hz = 512 + (int)(128.0f*controller->stick_average_y);
+            game_state->blue_offset += (int)(4.0f*controller->left_stick_average_x);
+            game_state->tone_hz = 512 + (int)(128.0f*controller->left_stick_average_y);
         }
         else
         {
@@ -106,8 +106,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         // Input.AButtonEndedDown;
         // Input.AButtonHalfTransitionCount;
 
-        game_state->player_x += (int)(4.0f*controller->stick_average_x);
-        game_state->player_y -= (int)(4.0f*controller->stick_average_y);
+        game_state->player_x += (int)(4.0f*controller->left_stick_average_x);
+        game_state->player_y -= (int)(4.0f*controller->left_stick_average_y);
         if(game_state->t_jump > 0)
         {
             game_state->player_y += (int)(5.0f*sinf(0.5f*Pi32*game_state->t_jump));

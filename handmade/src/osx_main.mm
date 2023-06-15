@@ -12,8 +12,7 @@
 
 
 #define global_variable static
-
-global_variable bool RUNNING = true;
+global_variable bool Running = true;
 
 // TODO: Destination bounds checking
 static void
@@ -157,22 +156,22 @@ DEBUG_PLATFORM_WRITE_ENTIRE_FILE(DEBUGPlatformWriteEntireFile)
 
     // TODO: Ted    Consider cleaning this up / compressing it?
     OSX_AppPath path = {};
-    MacBuildAppFilePath(&Path);
+    macBuildAppFilePath(&path);
 
-    char BundleFilename[MAC_MAX_FILENAME_SIZE];
-    char LocalFilename[MAC_MAX_FILENAME_SIZE];
+    char bundle_filename[MAC_MAX_FILENAME_SIZE];
+    char local_filename[MAC_MAX_FILENAME_SIZE];
 
     //sprintf(local_file_name, "Contents/%s", filename);
 
     macBuildAppPathFilename(&path, local_filename,
                             sizeof(bundle_filename), bundle_filename);
 
-    FILE* file_handle = fopen(bundle_Filename, "w");
+    FILE* file_handle = fopen(bundle_filename, "w");
 
     if (file_handle)
     {
-        uint64 bytes_written = fwrite(memory, 1, file_size, file_handle);
-        if (bytes_written == file_size)
+        uint64 bytes_written = fwrite(memory, 1, memory_size, file_handle);
+        if (bytes_written == memory_size)
         {
             result = true;
         } else
@@ -199,7 +198,7 @@ void controllerInput(void* context, IOReturn result,
         return;
     }
 
-    OSX_Game_Controller* osx_game_controller = (OSX_Game_Controller*)context;
+    Mac_Game_Controller* mac_game_controller = (Mac_Game_Controller*)context;
     
     IOHIDElementRef element = IOHIDValueGetElement(value);    
     uint32 usage_page = IOHIDElementGetUsagePage(element);
@@ -210,10 +209,11 @@ void controllerInput(void* context, IOReturn result,
         // TODO: (ted)  Use our own Boolean type here?
         BOOL button_state = (BOOL)IOHIDValueGetIntegerValue(value);
 
-        if (usage == osx_game_controller->bottom_button_usage_ID)
+        if (usage == mac_game_controller->osx_usage_id->bottom_action_usage_ID)
         {
-            osx_game_controller->bottom_button_state = button_state;
+            mac_game_controller->game_controller->action_down.ended_down = button_state;
         }
+        /*
         else if (usage == osx_game_controller->left_button_usage_ID)
         {
             osx_game_controller->left_button_state = button_state;
@@ -234,9 +234,11 @@ void controllerInput(void* context, IOReturn result,
         {
             osx_game_controller->right_shoulder_button_state = button_state;
         }
+        */
     }
     else if (usage_page == kHIDPage_GenericDesktop)
     {
+        /*
         double_t analog = IOHIDValueGetScaledValue(value, kIOHIDValueScaleTypeCalibrated);
 
         // NOTE: (ted)  It seems like slamming the stick left gives me a value of zero 
@@ -273,6 +275,7 @@ void controllerInput(void* context, IOReturn result,
             osx_game_controller->d_pad_x = d_pad_x;
             osx_game_controller->d_pad_y = d_pad_y;
         }
+        */
     }
 }
 
@@ -289,26 +292,25 @@ void controllerConnected(void* context, IOReturn result,
     NSUInteger product_ID = [(__bridge NSNumber *)IOHIDDeviceGetProperty(device, 
                                                                         CFSTR(kIOHIDProductIDKey)) unsignedIntegerValue];
 
-    OSX_Game_Controller* osx_game_controller = (OSX_Game_Controller*)context;
+    Mac_Game_Controller* mac_game_controller = (Mac_Game_Controller*)context;
 
     if(vendor_ID == 0x054C && product_ID == 0x5C4) {
         NSLog(@"Sony Dualshock 4 detected.");
-        
-        osx_game_controller->x_button_usage_ID = 0x02;
-        osx_game_controller->left_button_usage_ID = 0x01;
-        osx_game_controller->top_button_usage_ID = 0x04;
-        osx_game_controller->right_button_usage_ID = 0x03;
-        osx_game_controller->left_shoulder_button_usage_ID = 0x05;
-        osx_game_controller->right_shoulder_button_usage_ID = 0x06;
+        mac_game_controller->osx_usage_id->bottom_action_usage_ID = 0x02;
+        mac_game_controller->osx_usage_id->left_action_usage_ID = 0x01;
+        mac_game_controller->osx_usage_id->top_action_usage_ID = 0x04;
+        mac_game_controller->osx_usage_id->right_action_usage_ID = 0x03;
+        mac_game_controller->osx_usage_id->left_shoulder_button_usage_ID = 0x05;
+        mac_game_controller->osx_usage_id->right_shoulder_button_usage_ID = 0x06;
 
-        osx_game_controller->left_thumb_x_usage_ID = kHIDUsage_GD_X;
-        osx_game_controller->elft_thumb_y_usage_ID = kHIDUsage_GD_Y;
+        mac_game_controller->osx_usage_id->left_thumb_x_usage_ID = kHIDUsage_GD_X;
+        mac_game_controller->osx_usage_id->left_thumb_y_usage_ID = kHIDUsage_GD_Y;
     }
 
-    osx_game_controller->left_thumbstick_X = 128.0f;
-    osx_game_controller->left_thumbstick_Y = 128.0f;
+    mac_game_controller->game_controller->left_stick_average_x = 128.0f;
+    mac_game_controller->game_controller->left_stick_average_y = 128.0f;
 
-    IOHIDDeviceRegisterInputValueCallback(device, controllerInput, (void *)osx_game_controller);  
+    IOHIDDeviceRegisterInputValueCallback(device, controllerInput, (void*)mac_game_controller);  
 
     IOHIDDeviceSetInputValueMatchingMultiple(device, (__bridge CFArrayRef)@[
         @{@(kIOHIDElementUsagePageKey): @(kHIDPage_GenericDesktop)},
@@ -317,7 +319,7 @@ void controllerConnected(void* context, IOReturn result,
 }
 
 static void
-osxSetupGameController(OSX_Game_Controller* osx_game_controller)
+osxSetupGameController(Mac_Game_Controller* mac_game_controller)
 {
     IOHIDManagerRef HIDManager = IOHIDManagerCreate(kCFAllocatorDefault, 0);
 
@@ -326,8 +328,11 @@ osxSetupGameController(OSX_Game_Controller* osx_game_controller)
         NSLog(@"Error Initializing OSX Handmade Controllers");
         return;
     }
+    else {
+        //TODO: Log 
+    }
 
-    IOHIDManagerRegisterDeviceMatchingCallback(HIDManager, ControllerConnected, (void*)osx_game_controller);
+    IOHIDManagerRegisterDeviceMatchingCallback(HIDManager, controllerConnected, (void*)mac_game_controller);
 
     IOHIDManagerSetDeviceMatchingMultiple(HIDManager, (__bridge CFArrayRef)@[
         @{@(kIOHIDDeviceUsagePageKey): @(kHIDPage_GenericDesktop), @(kIOHIDDeviceUsageKey): @(kHIDUsage_GD_GamePad)},
@@ -344,7 +349,7 @@ osxSetupGameController(OSX_Game_Controller* osx_game_controller)
 // 1. Free file memory
 // 2. Debug write file
 
-void macRefreshBuffer(Game_Offscreen_Buffer *buffer, NSWindow *window) {
+void macRefreshBuffer(Game_Offscreen_Buffer *buffer, NSWindow* Window) {
 
     if (buffer->memory) {
         free(buffer->memory);
@@ -352,15 +357,15 @@ void macRefreshBuffer(Game_Offscreen_Buffer *buffer, NSWindow *window) {
 
     buffer->width = (uint32)Window.contentView.bounds.size.width;
     buffer->height = (uint32)Window.contentView.bounds.size.height;
-    buffer->pitch = Buffer->Width * Buffer->BytesPerPixel;
+    buffer->pitch = buffer->width * buffer->bytes_per_pixel;
     buffer->memory = (uint8 *)malloc(buffer->pitch * buffer->height);
 }
 
 
 // TODO: (Ted)  Replace this with hardware rendering.
-void macRedrawBuffer(Game_Offscreen_Buffer *buffer, NSWindow *Window) {
+void macRedrawBuffer(Game_Offscreen_Buffer* buffer, NSWindow* Window) {
     @autoreleasepool {
-        NSBitmapImageRep *Rep = [[[NSBitmapImageRep alloc] initWithBitmapDataPlanes: &Buffer->Memory
+        NSBitmapImageRep *Rep = [[[NSBitmapImageRep alloc] initWithBitmapDataPlanes: (unsigned char* _Nullable* _Nullable)buffer->memory
                                   pixelsWide: buffer->width
                                   pixelsHigh: buffer->height
                                   bitsPerSample: 8
@@ -384,7 +389,7 @@ macBeginRecordingInput(OSX_State* osx_state)
     if (osx_state->replay_memory_block)
     {
         osx_state->recording_handle = osx_state->replay_file_handle;
-        fseek(osx_state->recording_handle, (int64)osx_state->permanent_storage_size, SEEK_SET);
+        fseek(osx_state->recording_handle, (i64)osx_state->permanent_storage_size, SEEK_SET);
         memcpy(osx_state->replay_memory_block, osx_state->game_memory_block, osx_state->permanent_storage_size);
         osx_state->is_recording = true;
     }
@@ -402,7 +407,7 @@ macBeginInputPlayback(OSX_State* osx_state)
     if (osx_state->replay_memory_block)
     {
         osx_state->playback_handle = osx_state->replay_file_handle;
-        fseek(osx_state->playback_handle, (int64)osx_state->permanent_storage_size, SEEK_SET);
+        fseek(osx_state->playback_handle, (i64)osx_state->permanent_storage_size, SEEK_SET);
         memcpy(osx_state->game_memory_block, osx_state->replay_memory_block, osx_state->permanent_storage_size);
         osx_state->is_playing_back = true;
     }
@@ -415,7 +420,7 @@ macEndInputPlayback(OSX_State* osx_state)
 }
 
 static void
-macRecordInput(OSX_State *osx_state, game_input* new_input)
+macRecordInput(OSX_State *osx_state, Mac_Game_Controller* new_input)
 {
     size_t bytes_written = fwrite(new_input, sizeof(char), sizeof(*new_input), osx_state->recording_handle);
     if (bytes_written <= 0)
@@ -425,13 +430,13 @@ macRecordInput(OSX_State *osx_state, game_input* new_input)
 }
 
 static void
-macPlaybackInput(OSX_State* osx_state, game_input* new_input)
+macPlaybackInput(OSX_State* osx_state, Mac_Game_Controller* new_input)
 {
     uint64 bytes_read = fread(new_input, sizeof(char), sizeof(*new_input), osx_state->playback_handle);
     if (bytes_read <= 0) 
     {
-        MacEndInputPlayback(osx_state); 
-        MacBeginInputPlayback(osx_state);
+        macEndInputPlayback(osx_state); 
+        macBeginInputPlayback(osx_state);
     }
 }
 
@@ -441,7 +446,7 @@ macPlaybackInput(OSX_State* osx_state, game_input* new_input)
 
 @implementation OSX_MainWindowDelegate 
 
-- (void)windowWillClose:(id)sender {
+- (void)WindowWillClose:(id)sender {
     Running = false;  
 }
 
@@ -456,16 +461,16 @@ macPlaybackInput(OSX_State* osx_state, game_input* new_input)
 
 int main(int argc, const char* argv[]) {
 
-    NSRect screen_rect = [[NSScreen mainScreen] frame]
+    NSRect screen_rect = [[NSScreen mainScreen] frame];
 
     real32 global_render_width = 1024;
     real32 global_render_height = 768;
 
     NSRect initial_frame = NSMakeRect((screen_rect.size.width - (real64)global_render_width) * 0.5,
                                         (screen_rect.size.height - (real64)global_render_height) * 0.5,
-                                        (real64)GlobalRenderWidth, (real64)global_render_height);
+                                        (real64)global_render_width, (real64)global_render_height);
 
-    NSWindow *Window = [[KeyIgnoringWindow alloc] 
+    NSWindow *Window = [[Key_Ignoring_Window alloc] 
                          initWithContentRect: initial_frame
                          styleMask: NSWindowStyleMaskTitled |
                                     NSWindowStyleMaskClosable |
@@ -486,8 +491,8 @@ int main(int argc, const char* argv[]) {
    Osx_State.is_playing_back = false;
 
    OSX_AppPath osx_path = {};
-   Osx_Path.path = osx_path;
-   macBuildAppPathFilename(&Osx_State.path);
+   Osx_State.path = osx_path;
+   macBuildAppFilePath(&Osx_State.path);
 
    Game_Offscreen_Buffer buffer = {};
    buffer.bytes_per_pixel = 4;
@@ -496,17 +501,17 @@ int main(int argc, const char* argv[]) {
 
 #if HANDMADE_INTERNAL
     char* base_address = (char*)Gigabytes(8);
-    int32 allocation_flags = MAP_PRIVATE | MAP_ANON | MAP_FIXED;
+    i32 allocation_flags = MAP_PRIVATE | MAP_ANON | MAP_FIXED;
 #else
     void* base_address = 0;
-    int32 allocation_flags = MAP_PRIVATE | MAP_ANON;
+    i32 allocation_flags = MAP_PRIVATE | MAP_ANON;
 #endif 
 
-    int32 access_flags = PROT_READ | PROT_WRITE;
+    i32 access_flags = PROT_READ | PROT_WRITE;
 
-    uint64 total_size = game_memory.permanent_storage_size + game_memory.transient_storage_size;
+    u64 total_size = game_memory.permanent_storage_size + game_memory.transient_storage_size;
 
-    game_memory.permanent_storage = mmap(base_address, game_memory.permanent_storage_size, AccessFlags, 
+    game_memory.permanent_storage = mmap(base_address, game_memory.permanent_storage_size, access_flags, 
                                        allocation_flags, -1, 0);
 
     if (game_memory.transient_storage == MAP_FAILED) {
@@ -523,11 +528,11 @@ int main(int argc, const char* argv[]) {
     char filename[MAC_MAX_FILENAME_SIZE];
     char local_filename[MAC_MAX_FILENAME_SIZE];
     // TODO: (Jon) need to figure out waht is going on here.
-    sprintf(local_filename, "Contents/Resources/ReplayBuffer");
-    macBuildAppPathFilename(&osx_state.Path, local_filename,
+    //sprintf(local_filename, "Contents/Resources/ReplayBuffer");
+    macBuildAppPathFilename(&Osx_State.path, local_filename,
                             sizeof(filename), filename);
     file_descriptor = open(filename, O_CREAT | O_RDWR, mode);
-    int result = truncate(filename, (int64)game_memory.permanent_storage_size);
+    int result = truncate(filename, (i64)game_memory.permanent_storage_size);
 
     if (result < 0)
     {
@@ -536,7 +541,7 @@ int main(int argc, const char* argv[]) {
 
     Osx_State.replay_memory_block = mmap(0, game_memory.permanent_storage_size,
                                       PROT_READ | PROT_WRITE,
-                                      MAP_PRIVATE, FileDescriptor, 0);
+                                      MAP_PRIVATE, file_descriptor, 0);
     Osx_State.replay_file_handle = fopen(filename, "r+");
 
     fseek(Osx_State.replay_file_handle, (int)Osx_State.permanent_storage_size, SEEK_SET);
@@ -547,6 +552,8 @@ int main(int argc, const char* argv[]) {
     }
 
     OSX_Game_Controller game_controller = {};
+    Mac_Game_Controller NewInput = {};
+    Mac_Game_Controller OldInput = {};
     // setup game controller.
 
     OSX_Game_Controller keyboard_controller = {};
@@ -562,7 +569,7 @@ int main(int argc, const char* argv[]) {
     // macSetupAudio(&sound_output);
 
     // Game_Sound_Output_Buffer sound_buffer = {};
-    int16* samples = (int16*)calloc(sound_output.samples_per_second,
+    i16* samples = (i16*)calloc(sound_output.samples_per_second,
                                     sound_output.bytes_per_sample);
 
     /*
@@ -584,14 +591,14 @@ int main(int argc, const char* argv[]) {
                             sizeof(GameLibraryFullPath), GameLibraryFullPath);
     */
     OSX_Game_Code game = {};
-    macLoadGameCode(&Game, game_library_full_path);
+    //macLoadGameCode(&game, game_library_full_path);
 
     mach_timebase_info_data_t TimeBase;
     mach_timebase_info(&TimeBase);
 
     uint64 last_counter = mach_absolute_time();
     
-    while(RUNNING) {
+    while(Running) {
         NSEvent* event;
         do {
             event = [NSApp nextEventMatchingMask: NSEventMaskAny
@@ -604,17 +611,15 @@ int main(int argc, const char* argv[]) {
             {
                 //MacHandleKeyboardEvent(&KeyboardController, Event, &osx_state);
             }
-            switch ([Event type]) {
+            switch ([event type]) {
                 default:
-                    [NSApp sendEvent: Event];
+                    [NSApp sendEvent: event];
             }
-        } while (Event != nil);
+        } while (event != nil);
 
-        /*
-        game_input *Temp = NewInput;
+        Mac_Game_Controller Temp = NewInput;
         NewInput = OldInput;
         OldInput = Temp;
-        */
         
         /*
         for (int MacControllerIndex = 0;
@@ -705,23 +710,26 @@ int main(int argc, const char* argv[]) {
     SoundBuffer.Samples = Samples;
     SoundBuffer.SampleCount = (BytesToWrite/SoundOutput.BytesPerSample);
     */
-        if (Game.DLLLastWriteTime < NewGameLibraryWriteTime)
+    /*
+        if (game.DLLLastWriteTime < NewGameLibraryWriteTime)
         {
-            MacUnloadGameCode(&Game); 
-            MacLoadGameCode(&Game, GameLibraryFullPath); 
+            MacUnloadGameCode(&game); 
+            MacLoadGameCode(&game, GameLibraryFullPath); 
+        }
+        */
+
+        if (Osx_State.is_recording)
+        {
+            macRecordInput(&Osx_State, &NewInput);
+        } else if (Osx_State.is_playing_back)
+        {
+            macPlaybackInput(&Osx_State, &NewInput);
         }
 
-        if (osx_state.IsRecording)
-        {
-            MacRecordInput(&osx_state, NewInput);
-        } else if (osx_state.IsPlayingBack)
-        {
-            MacPlaybackInput(&osx_state, NewInput);
-        }
+        //game.UpdateAndRender(&game_memory, NewInput, &buffer);
+        //game.GetSoundSamples(&game_memory, &sound_buffer);
 
-        Game.UpdateAndRender(&GameMemory, NewInput, &Buffer);
-        Game.GetSoundSamples(&GameMemory, &SoundBuffer);
-
+/*
         void *Region1 = (uint8*)SoundOutput.Data + ByteToLock;
         uint32 Region1Size = BytesToWrite;
         
@@ -756,11 +764,12 @@ int main(int argc, const char* argv[]) {
 
         uint64 WorkCounter = mach_absolute_time();
 
-        real32 WorkSeconds = MacGetSecondsElapsed(&TimeBase, LastCounter,
-                                                  WorkCounter);
+*/
+        //real32 WorkSeconds = MacGetSecondsElapsed(&TimeBase, LastCounter, WorkCounter);
 
-        real32 SecondsElapsedForFrame = WorkSeconds;
+        //real32 SecondsElapsedForFrame = WorkSeconds;
 
+/*
         if (SecondsElapsedForFrame < TargetSecondsPerFrame)
         {
             // NOTE: We need to sleep up to the target framerate 
@@ -784,23 +793,24 @@ int main(int argc, const char* argv[]) {
         {
             // TODO: Log MISSED FRAME RATE!!!
         }
+        */
     
         // NOTE: End of Updates
         uint64 EndOfFrameTime = mach_absolute_time();
 
-        uint64 TimeUnitsPerFrame = EndOfFrameTime - LastCounter;
+        //uint64 TimeUnitsPerFrame = EndOfFrameTime - LastCounter;
 
         // Here is where you print stuff..
-        uint64 NanosecondsPerFrame = TimeUnitsPerFrame * (TimeBase.numer / TimeBase.denom);
-        real32 SecondsPerFrame = (real32)NanosecondsPerFrame * (real32)1.0E-9;
-        real32 MillesSecondsPerFrame = (real32)NanosecondsPerFrame * (real32)1.0E-6;
-        real32 FramesPerSecond = 1 / SecondsPerFrame;
+        //uint64 NanosecondsPerFrame = TimeUnitsPerFrame * (TimeBase.numer / TimeBase.denom);
+        //real32 SecondsPerFrame = (real32)NanosecondsPerFrame * (real32)1.0E-9;
+        //real32 MillesSecondsPerFrame = (real32)NanosecondsPerFrame * (real32)1.0E-6;
+        //real32 FramesPerSecond = 1 / SecondsPerFrame;
 
-        NSLog(@"Frames Per Second: %f", (real64)FramesPerSecond); 
-        NSLog(@"MillesSecondsPerFrame: %f", (real64)MillesSecondsPerFrame); 
+        //NSLog(@"Frames Per Second: %f", (real64)FramesPerSecond); 
+        //NSLog(@"MillesSecondsPerFrame: %f", (real64)MillesSecondsPerFrame); 
 
-        LastCounter = mach_absolute_time();
+        //LastCounter = mach_absolute_time();
 
-        MacRedrawBuffer(&Buffer, Window); 
+        macRedrawBuffer(&buffer, Window); 
     }
 }
