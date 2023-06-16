@@ -6,8 +6,8 @@
 
 /*
     Gamepad basics: done 15 june
-    Keyboard: 
-    Sound
+    Keyboard: done 16 June
+    Sound:
     frame rate
     saved last 20 secs
     tile map
@@ -19,7 +19,56 @@
 #include "core.h"
 #include "win32_platform.h"
 
-struct Render_Buffer {
+struct Win32_Offscreen_Buffer {
+    // NOTE(casey): Pixels are alwasy 32-bits wide, Memory Order BB GG RR XX
+    BITMAPINFO info;
+    void* memory;
+    int width;
+    int height;
+    int pitch;
+    int bytes_per_pixel;
+};
+
+struct Win32_Sound_Buffer {
+    int samples_per_second;
+    uint32 running_sample_index;
+    int bytes_per_sample;
+    DWORD secondary_buffer_size;
+    DWORD safety_bytes;
+    real32 t_sine;
+    // TODO: Should running sample index be in bytes as well
+    // TODO: Math gets simpler if we add a "bytes per second" field?
+};
+
+struct Win32_Window_Dimension{
+    int width;
+    int height;
+};
+
+#define WIN32_STATE_FILE_NAME_COUNT MAX_PATH
+struct Win32_Replay_Buffer {
+    HANDLE file_handle;
+    HANDLE memory_map;
+    char file_name[WIN32_STATE_FILE_NAME_COUNT];
+    void* memory_block;
+};
+
+struct win32_state {
+    uint64 total_size;
+    void* game_memory_block;
+    Win32_Replay_Buffer replay_buffers[4];
+    
+    HANDLE recording_handle;
+    int input_recording_index;
+
+    HANDLE playback_handle;
+    int input_playing_index;
+    
+    char EXE_file_name[WIN32_STATE_FILE_NAME_COUNT];
+    char* one_past_last_EXE_filename_slash;
+};
+
+struct Win32_Render_Buffer {
     int width;
     int height;
     int num_of_pixels;
@@ -27,7 +76,7 @@ struct Render_Buffer {
     BITMAPINFO bitmap_info;
 };
 
-global_variable Render_Buffer render_buffer = {0};
+global_variable Win32_Render_Buffer render_buffer = {0};
 global_variable char RUNNING = 1;
 
 static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
@@ -38,6 +87,9 @@ static void win32_process_x_input_button(DWORD x_input_state, Game_Button_State*
 static real32 win32_process_x_input_stick(SHORT value, SHORT dead_zone_threshold);
 static void win32_process_keyboard_message(Game_Button_State* new_state, bool32 is_down);
 
+// DSound Shenanigans
+#define DIRECT_SOUND_CREATE(name) HRESULT WINAPI name(LPCGUID pcGuidDevice, LPDIRECTSOUND *ppDS, LPUNKNOWN pUnkOuter)
+typedef DIRECT_SOUND_CREATE(_DirectSoundCreate);
 
 // Xinput Get State /////////////////////////////////////////////////////////////
 // This makes name represetn the funciton address on the right
@@ -98,6 +150,78 @@ static void win32_process_keyboard_message(Game_Button_State* new_state, bool32 
         ++new_state->half_transition_count;
     }
 }
+//******************************** END INPUT Section ************************************//
+
+//******************************* Direct Sound Section *********************************//
+static void win32_init_direct_sound(HWND window, i32 samples_per_second, i32 buffer_size) {
+    HMODULE d_sound_library = LoadLibraryA("dsound.dll");
+    if (d_sound_library) {
+
+        _DirectSoundCreate* directSoundCreate = (_DirectSoundCreate*)GetProcAddress(d_sound_library, "DirectSoundCreate");
+
+        LPDIRECTSOUND direct_sound;
+        HRESULT debug_create_dsound = directSoundCreate(NULL, &direct_sound, NULL);
+         if (debug_create_dsound == DS_OK) {
+            WAVEFORMATEX pri_wave_format = {};
+            pri_wave_format.wFormatTag = WAVE_FORMAT_PCM; 
+            pri_wave_format.nChannels = 2;
+            pri_wave_format.nSamplesPerSec = 48000;
+            pri_wave_format.wBitsPerSample = 16;
+            pri_wave_format.nBlockAlign = (pri_wave_format.wBitsPerSample * pri_wave_format.nChannels) / 8;
+            pri_wave_format.nAvgBytesPerSec = pri_wave_format.nSamplesPerSec * pri_wave_format.nBlockAlign;
+            pri_wave_format.cbSize = 0; // This is ignored when using WAVE_FORMAT_PCM
+
+            DSBUFFERDESC pri_buffer_descriptipn = {};
+            pri_buffer_descriptipn.dwSize = sizeof(pri_buffer_descriptipn);
+            pri_buffer_descriptipn.dwFlags = DSBCAPS_PRIMARYBUFFER;
+            pri_buffer_descriptipn.dwBufferBytes = 0; // Must be zero for primary buffer
+            pri_buffer_descriptipn.dwReserved = 0; // MUst be zero
+            pri_buffer_descriptipn.lpwfxFormat = &pri_wave_format;
+            pri_buffer_descriptipn.guid3DAlgorithm = GUID_NULL;
+
+            LPDIRECTSOUNDBUFFER primary_sound_buffer = {};
+            
+            if(SUCCEEDED(direct_sound->SetCooperativeLevel(window, DSSCL_PRIORITY))){
+                if (SUCCEEDED(direct_sound->CreateSoundBuffer(&pri_buffer_descriptipn, &primary_sound_buffer, NULL))) {
+                    HRESULT error = primary_sound_buffer->SetFormat(&pri_wave_format);
+                    if (SUCCEEDED(error)) {
+                        OutputDebugStringA("Primary buffer formatw as set. Direct sound initialized.");
+                    }
+                    else {
+                        // TODO: Failed format
+                    }
+                } 
+                else {
+                    // TODO: Failed creating sound buffer
+                }
+            }
+            else {
+                // TODO: unable to set coopoerative level in direct sound
+            }
+            // Set secondary buffer
+            DSBUFFERDESC sec_buffer_descriptipn = {};
+            sec_buffer_descriptipn.dwSize = sizeof(sec_buffer_descriptipn);
+            sec_buffer_descriptipn.dwFlags = DSBCAPS_GETCURRENTPOSITION2;
+            sec_buffer_descriptipn.dwBufferBytes = buffer_size; // Must be zero for primary buffer
+            sec_buffer_descriptipn.dwReserved = 0; // MUst be zero
+            sec_buffer_descriptipn.lpwfxFormat = &pri_wave_format;
+            sec_buffer_descriptipn.guid3DAlgorithm = GUID_NULL;
+
+            LPDIRECTSOUNDBUFFER global_secondary_buffer = {};
+            HRESULT error = direct_sound->CreateSoundBuffer(&sec_buffer_descriptipn, &global_secondary_buffer, 0);
+            if (SUCCEEDED(error)) {
+                OutputDebugStringA("Secondary buffer created successfully.\n");
+            }
+         }
+         else {
+            // TODO: Logging
+         }
+    }
+    else {
+        // TODO: Logging
+    }
+}
+//**************************** END Direct Sound Section ********************************//
 
 static void render_gradient(int x_offset) {
     for (int i = 0; i < render_buffer.num_of_pixels; i++) {
@@ -151,29 +275,74 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 
     HDC hdc = GetDC(window);
 
-    /*
-    render_buffer.width = INITIAL_WINDOW_X;
-    render_buffer.height = INITIAL_WINDOW_Y;
-    render_buffer.num_of_pixels = INITIAL_WINDOW_X * INITIAL_WINDOW_Y;
-    */
-
+    // SETUP GAME INPUT
    win32LoadXInput();
    Game_Input input[2] = {};
    Game_Input* new_input = &input[0];
    Game_Input* old_input = &input[1];
+   
+   // Window monitor refresh
+   int monitor_refresh_hz = 60;
+   HDC refresh_dc = GetDC(window);
+   int win32_refresh_rate = GetDeviceCaps(refresh_dc, VREFRESH);
+   ReleaseDC(window, refresh_dc);
+   if (win32_refresh_rate > 1) {
+        monitor_refresh_hz = win32_refresh_rate;
+   }
+   real32 game_update_hz = (monitor_refresh_hz / 2.0f);
+   real32 target_seconds_per_frame = 1.0f / (real32)game_update_hz;
 
-    Game_Controller_Input* new_controller = getController(new_input, 0);
-    Game_Controller_Input* old_controller = getController(old_input, 0);
+    // Setup sound
+    Win32_Sound_Output sound_output = {};
+    sound_output.samples_per_second = 48000;
+    sound_output.bytes_per_sample = sizeof(i16) * 2;
+    sound_output.secondary_buffer_size = sound_output.samples_per_second * sound_output.bytes_per_sample;
+    sound_output.safety_bytes = (int)(((real32)sound_output.samples_per_second *
+                                       (real32)sound_output.bytes_per_sample / game_update_hz)
+                                       / 3.0f);
+
+    win32_init_direct_sound(window, 4800, 480000);
+
 
     // Run the message loop.
     while (RUNNING) {
 
+
+        //******************** INPUT SECTION ***************************//
+        Game_Controller_Input* new_keyboard = getController(new_input, 0);
+        Game_Controller_Input* old_keyboard = getController(old_input, 0);
+        *new_keyboard = {0};
+        new_keyboard->is_connected = true;
+        for (int button_index = 0; button_index < ArrayCount(new_keyboard->buttons); button_index++) {
+            new_keyboard->buttons[button_index].ended_down = old_keyboard->buttons[button_index].ended_down;
+        }
+        win32ProcessPendingMessage(new_keyboard);
+        OutputDebugStringA("Test");
+        
+        // MOUSE
+        POINT mouse_pos;
+        GetCursorPos(&mouse_pos);
+        ScreenToClient(window, &mouse_pos);
+        new_input->mouse_x = mouse_pos.x;
+        new_input->mouse_y = mouse_pos.y;
+        new_input->mouse_z = 0;
+        /*
+        win32_process_keyboard_message(&new_input->mouse_buttons[0], GetKeyState(VK_LBUTTON) & (1 << 15));
+        win32_process_keyboard_message(&new_input->mouse_buttons[1], GetKeyState(VK_MBUTTON) & (1 << 15));
+        win32_process_keyboard_message(&new_input->mouse_buttons[2], GetKeyState(VK_RBUTTON) & (1 << 15));
+        win32_process_keyboard_message(&new_input->mouse_buttons[3], GetKeyState(VK_XBUTTON1) & (1 << 15));
+        win32_process_keyboard_message(&new_input->mouse_buttons[4], GetKeyState(VK_XBUTTON2) & (1 << 15));
+        */
 
         DWORD dwResult;    
         for (DWORD controller_index = 0; controller_index < XUSER_MAX_COUNT; controller_index++ )
         {
             XINPUT_STATE x_input_controller_state;
             ZeroMemory( &x_input_controller_state, sizeof(XINPUT_STATE));
+
+            // +1, because the input[0] is for the keybaord and 1-4 is for controllers. 
+            Game_Controller_Input* new_controller = getController(new_input, controller_index + 1);
+            Game_Controller_Input* old_controller = getController(old_input, controller_index + 1);
 
             // Simply get the state of the controller from XInput.
             dwResult = XInputGetState(controller_index, &x_input_controller_state );
@@ -228,10 +397,15 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
             if (new_controller->left_stick_average_x) {
                 DEBUF_X_OFFSET += (100 * new_controller->left_stick_average_x);
             }
-
             if (new_controller->action_down.ended_down) {
                 // A is down
                 DEBUF_X_OFFSET += 100;
+            }
+            if (new_keyboard->move_up.ended_down || new_keyboard->move_up.half_transition_count ) {
+                DEBUF_X_OFFSET += 100;
+            }
+            if (new_keyboard->move_down.ended_down || new_keyboard->move_up.half_transition_count) {
+                DEBUF_X_OFFSET -= 100;
             }
         }
         MSG msg;
@@ -251,6 +425,11 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
                 }
             }
         }
+
+        // Game input flip new and old.
+        Game_Input* temp = new_input;
+        new_input = old_input;
+        old_input = temp;
 
         // Render 
         StretchDIBits(
