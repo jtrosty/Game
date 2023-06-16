@@ -53,7 +53,7 @@ struct Win32_Replay_Buffer {
     void* memory_block;
 };
 
-struct win32_state {
+struct Win32_State {
     uint64 total_size;
     void* game_memory_block;
     Win32_Replay_Buffer replay_buffers[4];
@@ -76,8 +76,10 @@ struct Win32_Render_Buffer {
     BITMAPINFO bitmap_info;
 };
 
+
 global_variable Win32_Render_Buffer render_buffer = {0};
 global_variable char RUNNING = 1;
+global_variable i64 global_perf_count_frequency;
 
 static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 static void win32ProcessPendingMessage(Game_Controller_Input* keyboard_controller);
@@ -86,7 +88,6 @@ static void win32_process_x_input_button(DWORD x_input_state, Game_Button_State*
                                          DWORD button_bit, Game_Button_State* new_state);
 static real32 win32_process_x_input_stick(SHORT value, SHORT dead_zone_threshold);
 static void win32_process_keyboard_message(Game_Button_State* new_state, bool32 is_down);
-
 // DSound Shenanigans
 #define DIRECT_SOUND_CREATE(name) HRESULT WINAPI name(LPCGUID pcGuidDevice, LPDIRECTSOUND *ppDS, LPUNKNOWN pUnkOuter)
 typedef DIRECT_SOUND_CREATE(_DirectSoundCreate);
@@ -223,6 +224,21 @@ static void win32_init_direct_sound(HWND window, i32 samples_per_second, i32 buf
 }
 //**************************** END Direct Sound Section ********************************//
 
+//**************************** Start Timing ********************************//
+inline LARGE_INTEGER win32_getWallClock(void) {
+    LARGE_INTEGER result;
+    QueryPerformanceCounter(&result);
+    return result;
+}
+
+inline real32 win32_getSecondsElapsed(LARGE_INTEGER start, LARGE_INTEGER end) {
+    real32 result ((real32)(end.QuadPart - start.QuadPart) / (real32)global_perf_count_frequency);
+    return result;
+}
+
+//**************************** END Timing   ********************************//
+
+
 static void render_gradient(int x_offset) {
     for (int i = 0; i < render_buffer.num_of_pixels; i++) {
         render_buffer.pixels[i] = 0xFF0000ff + x_offset++;
@@ -239,6 +255,13 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     // Register the window class.
     //const wchar_t CLASS_NAME[]  = L"Core Game Trost";
     // REMOVE
+    Win32_State win32_state = {};
+    LARGE_INTEGER perf_count_frequency_result;
+    QueryPerformanceCounter(&perf_count_frequency_result);
+    global_perf_count_frequency = perf_count_frequency_result.QuadPart;
+
+
+
     int DEBUF_X_OFFSET = 0;
     
     WNDCLASSA window_class = {0};
