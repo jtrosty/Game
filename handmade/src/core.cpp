@@ -82,7 +82,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         controller_index < ArrayCount(input->controllers);
         ++controller_index)
     {
-        Game_Controller_Input* controller = get_controller(input, controller_index);
+        Game_Controller_Input* controller = getController(input, controller_index);
         if(controller->is_analog)
         {
             // NOTE(casey): Use analog movement tuning

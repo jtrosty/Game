@@ -44,14 +44,14 @@ COMMON_COMPILER_FLAGS="$COMPILER_WARNING_FLAGS
 
 mkdir build
 pushd build
-rm -rf handmade.app
+rm -rf core.app
 mkdir -p $BUNDLE_RESOURCES_PATH
 pwd
 clang -g -o GameCode.dylib ${COMMON_COMPILER_FLAGS} -dynamiclib ../src/core.cpp
-clang -g ${COMMON_COMPILER_FLAGS} -o handmade ../src/osx_main.mm
-cp handmade handmade.app/handmade
+clang -g ${COMMON_COMPILER_FLAGS} -o core ../src/osx_main.mm
+cp core core.app/core
 cp "${RESOURCES_PATH}/Info.plist" handmade.app/Info.plist
-cp "${RESOURCES_PATH}/test_background.bmp" $BUNDLE_RESOURCES_PATH
+#cp "${RESOURCES_PATH}/test_background.bmp" $BUNDLE_RESOURCES_PATH
 cp GameCode.dylib "${BUNDLE_RESOURCES_PATH}/GameCode.dylib"
 cp -r GameCode.dylib.dSYM "${BUNDLE_RESOURCES_PATH}/GameCode.dylib.dSYM"
 popd
