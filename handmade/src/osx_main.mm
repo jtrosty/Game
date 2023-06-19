@@ -364,6 +364,11 @@ void macRefreshBuffer(Game_Offscreen_Buffer *buffer, NSWindow* Window) {
 
 // TODO: (Ted)  Replace this with hardware rendering.
 void macRedrawBuffer(Game_Offscreen_Buffer* buffer, NSWindow* Window) {
+    int size_buffer = buffer->width * buffer->height;
+    u32* pixels = (u32*)(buffer->memory);
+    for (int i = 0; i < size_buffer; i++) {
+        pixels[i] = 0xFF00FF00;
+    }
     @autoreleasepool {
         NSBitmapImageRep *Rep = [[[NSBitmapImageRep alloc] initWithBitmapDataPlanes: (unsigned char* _Nullable* _Nullable)buffer->memory
                                   pixelsWide: buffer->width
@@ -496,8 +501,15 @@ int main(int argc, const char* argv[]) {
 
    Game_Offscreen_Buffer buffer = {};
    buffer.bytes_per_pixel = 4;
+   macRefreshBuffer(&buffer, Window);
 
    Game_Memory game_memory = {};
+    game_memory.DEBUG_platformReadEntireFile = DEBUGPlatformReadEntireFile;
+    game_memory.DEBUG_platformFreeFileMemory = DEBUGPlatformFreeFileMemory;
+    game_memory.DEBUG_platformWriteEntireFile = DEBUGPlatformWriteEntireFile;
+   
+    game_memory.permanent_storage_size = Megabytes(64);
+    game_memory.transient_storage_size = Gigabytes(4);
 
 #if HANDMADE_INTERNAL
     char* base_address = (char*)Gigabytes(8);
@@ -538,18 +550,19 @@ int main(int argc, const char* argv[]) {
     {
         // TODO: (Jon T)  Log This
     }
-
     Osx_State.replay_memory_block = mmap(0, game_memory.permanent_storage_size,
                                       PROT_READ | PROT_WRITE,
                                       MAP_PRIVATE, file_descriptor, 0);
     Osx_State.replay_file_handle = fopen(filename, "r+");
 
+    /*
     fseek(Osx_State.replay_file_handle, (int)Osx_State.permanent_storage_size, SEEK_SET);
     if (Osx_State.replay_memory_block)
     {
     } else {
         // TODO: (casey)    Diagnostic
     }
+    */
 
     OSX_Game_Controller game_controller = {};
     Mac_Game_Controller NewInput = {};
