@@ -7,8 +7,9 @@
 /*
     Gamepad basics: done 15 june
     Keyboard: done 16 June
-    Sound:
-    frame rate
+    Sound: We have a sound buffer 25 June
+    frame rate: 
+    dll stuff: 
     saved last 20 secs
     tile map
 */
@@ -80,6 +81,8 @@ struct Win32_Render_Buffer {
 global_variable Win32_Render_Buffer render_buffer = {0};
 global_variable char RUNNING = 1;
 global_variable i64 global_perf_count_frequency;
+global_variable LPDIRECTSOUNDBUFFER global_secondary_buffer;
+global_variable Win32_Offscreen_Buffer global_back_buffer;
 
 static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 static void win32ProcessPendingMessage(Game_Controller_Input* keyboard_controller);
@@ -208,7 +211,6 @@ static void win32_init_direct_sound(HWND window, i32 samples_per_second, i32 buf
             sec_buffer_descriptipn.lpwfxFormat = &pri_wave_format;
             sec_buffer_descriptipn.guid3DAlgorithm = GUID_NULL;
 
-            LPDIRECTSOUNDBUFFER global_secondary_buffer = {};
             HRESULT error = direct_sound->CreateSoundBuffer(&sec_buffer_descriptipn, &global_secondary_buffer, 0);
             if (SUCCEEDED(error)) {
                 OutputDebugStringA("Secondary buffer created successfully.\n");
@@ -222,6 +224,58 @@ static void win32_init_direct_sound(HWND window, i32 samples_per_second, i32 buf
         // TODO: Logging
     }
 }
+
+static void win32_fillSoundBuffer(Win32_Sound_Output* sound_output, DWORD byte_to_lock, DWORD bytes_to_writes, Game_Sound_Output_Buffer* source_buffer) {
+    VOID* region_1;
+    DWORD region_1_size;
+    VOID* region_2;
+    DWORD region_2_size;
+    if (SUCCEEDED(global_secondary_buffer->Lock(byte_to_lock, bytes_to_writes, 
+                                                &region_1, &region_1_size, 
+                                                &region_2, &region_2_size, 
+                                                0))) {
+        DWORD region_1_sample_count = region_1_size /sound_output->bytes_per_sample;
+        i16* dest_sample = (i16*)region_1;
+        i16* source_sample = (i16*)source_buffer->samples;
+        for (DWORD sample_index = 0; sample_index < region_1_sample_count; ++sample_index) {
+            *dest_sample++ = *source_sample++;
+            *dest_sample++ = *source_sample++;
+
+            ++sound_output->running_sample_index;
+        }
+        DWORD region_2_sample_count = region_2_size / sound_output->bytes_per_sample;
+        dest_sample = (i16*)region_2;
+        for (DWORD sample_index = 0; sample_index < region_2_sample_count; ++sample_index) {
+            *dest_sample++ = *source_sample++;
+            *dest_sample++ = *source_sample++;
+
+            ++sound_output->running_sample_index;
+        }
+        global_secondary_buffer->Unlock(region_1, region_1_size, region_2, region_2_size);
+    }
+}
+
+static void win32_clearBuffer(Win32_Sound_Output* sound_output) {
+    VOID* region_1;
+    DWORD region_1_size;
+    VOID* region_2;
+    DWORD region_2_size;
+    if (SUCCEEDED(global_secondary_buffer->Lock(0, sound_output->secondary_buffer_size, 
+                                                &region_1, &region_1_size, 
+                                                &region_2, &region_2_size, 
+                                                0))) {
+        u8* dest_sample = (u8*)region_1;
+        for (DWORD byte_index = 0; byte_index < region_1_size; ++byte_index) {
+            *dest_sample = 0;
+        }
+        dest_sample = (u8*)region_2;
+        for (DWORD byte_index = 0; byte_index < region_2_size; ++byte_index) {
+            *dest_sample = 0;
+        }
+        global_secondary_buffer->Unlock(region_1, region_1_size, region_2, region_2_size);
+    }
+}
+
 //**************************** END Direct Sound Section ********************************//
 
 //**************************** Start Timing ********************************//
@@ -249,6 +303,25 @@ static void render_gradient(int x_offset) {
         // 0x000000FF blue
     }
 }
+
+static void DEBUG_output_sound(Game_State* game_state, Game_Sound_Output_Buffer* sound_buffer, int tone_hz) {
+    i16 tone_volume = 3000;
+    int wave_period = sound_buffer->samples_per_second / tone_hz;
+
+    i16* sample_out = sound_buffer->samples;
+    for (int sample_index = 0; sample_index < sound_buffer->sample_count; ++sample_index) {
+        real32 sine_value = sinf(game_state->t_sine);
+        i16 sample_value = (i16)(sine_value * tone_volume);
+        *sample_out++ = sample_value;
+        *sample_out++ = sample_value;
+
+        game_state->t_sine += 2.0f * Pi32 * 1.0f / (real32)wave_period;
+        if(game_state->t_sine > 2.0f * Pi32) {
+            game_state->t_sine -= 2.0f * Pi32;
+        }
+    }
+}
+//*************************************************************************************
 
 int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
@@ -298,13 +371,12 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 
     HDC hdc = GetDC(window);
 
-    // SETUP GAME INPUT
-   win32LoadXInput();
-   Game_Input input[2] = {};
-   Game_Input* new_input = &input[0];
-   Game_Input* old_input = &input[1];
    
    // Window monitor refresh
+   LARGE_INTEGER perf_count_frequency_result;
+   QueryPerformanceFrequency(&perf_count_frequency_result);
+   global_perf_count_frequency = perf_count_frequency_result.QuadPart;
+
    int monitor_refresh_hz = 60;
    HDC refresh_dc = GetDC(window);
    int win32_refresh_rate = GetDeviceCaps(refresh_dc, VREFRESH);
@@ -324,12 +396,56 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
                                        (real32)sound_output.bytes_per_sample / game_update_hz)
                                        / 3.0f);
 
-    win32_init_direct_sound(window, 4800, 480000);
+    win32_init_direct_sound(window, 4800, sound_output.secondary_buffer_size);
+    win32_clearBuffer(&sound_output);
+    global_secondary_buffer->Play(0, 0, DSBPLAY_LOOPING);
+    i16* sound_samples = (i16*)VirtualAlloc(0, sound_output.secondary_buffer_size, 
+                                            MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
 
+#if HANDMADE_INTERNAL
+    LPVOID base_address = 0;
+    //LPVOID base_address = (LPVOID)Terabytes(2);
+#else
+    LPVOID base_address = 0;
+#endif
+
+    // Game memory loading
+    Game_Memory game_memory = {};
+    game_memory.permanent_storage_size = Megabytes(64);
+    game_memory.transient_storage_size = Gigabytes(1);
+    /*
+    game_memory.DEBUG_platformFreeFileMemory = DEBUG_PLATFORM_FREE_FILE_MEMORY;
+    game_memory.DEBUG_platformReadEntireFile = DEBUG_PLATFORM_READ_ENTIRE_FILE;
+    game_memory.DEBUG_platformWriteEntireFile = DEBUG_PLATFORM_WRITE_ENTIRE_FILE;
+    */
+
+    win32_state.total_size = game_memory.permanent_storage_size + game_memory.transient_storage_size;
+    win32_state.game_memory_block = VirtualAlloc(base_address, (size_t)win32_state.total_size, 
+                                                MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+    game_memory.permanent_storage = win32_state.game_memory_block;
+    game_memory.transient_storage = ((u8*)game_memory.permanent_storage + game_memory.permanent_storage_size);
+
+
+    // Setup sound stuff 
+    DWORD audio_latency_bytes = 0;
+    real32 audio_latency_seconds = 0;
+    bool32 sound_is_valid = false;
+
+
+    // SETUP GAME INPUT
+   win32LoadXInput();
+   Game_Input input[2] = {};
+   Game_Input* new_input = &input[0];
+   Game_Input* old_input = &input[1];
+
+   LARGE_INTEGER last_counter = win32_getWallClock();
+   LARGE_INTEGER flip_wall_clock = win32_getWallClock();
+
+   // DEBUG
+   Game_State* game_state = (Game_State*)game_memory.permanent_storage;
 
     // Run the message loop.
     while (RUNNING) {
-
 
         //******************** INPUT SECTION ***************************//
         Game_Controller_Input* new_keyboard = getController(new_input, 0);
@@ -431,6 +547,105 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
                 DEBUF_X_OFFSET -= 100;
             }
         }
+
+        Game_Offscreen_Buffer buffer = {};
+        buffer.memory = global_back_buffer.memory;
+        buffer.width = global_back_buffer.width;
+        buffer.height = global_back_buffer.height;
+        buffer.pitch = global_back_buffer.pitch;
+        buffer.bytes_per_pixel = global_back_buffer.bytes_per_pixel;
+
+
+        // Sound
+        LARGE_INTEGER audio_wall_clock = win32_getWallClock();
+        real32 from_begin_to_audio_seconds = win32_getSecondsElapsed(flip_wall_clock, audio_wall_clock);
+        
+        DWORD play_cursor;
+        DWORD write_cursor;
+        if (global_secondary_buffer->GetCurrentPosition(&play_cursor, &write_cursor) == DS_OK) {
+                            /* NOTE(casey):
+
+                               Here is how sound output computation works.
+
+                               We define a safety value that is the number
+                               of samples we think our game update loop
+                               may vary by (let's say up to 2ms)
+                       
+                               When we wake up to write audio, we will look
+                               and see what the play cursor position is and we
+                               will forecast ahead where we think the play
+                               cursor will be on the next frame boundary.
+
+                               We will then look to see if the write cursor is
+                               before that by at least our safety value.  If
+                               it is, the target fill position is that frame
+                               boundary plus one frame.  This gives us perfect
+                               audio sync in the case of a card that has low
+                               enough latency.
+
+                               If the write cursor is _after_ that safety
+                               margin, then we assume we can never sync the
+                               audio perfectly, so we will write one frame's
+                               worth of audio plus the safety margin's worth
+                               of guard samples.
+                            */
+            if (!sound_is_valid) {
+                sound_output.running_sample_index = write_cursor / sound_output.bytes_per_sample;
+                sound_is_valid = true;
+            }
+            DWORD byte_to_lock = ((sound_output.running_sample_index * sound_output.bytes_per_sample) % 
+                                    sound_output.secondary_buffer_size);
+            DWORD expected_sound_bytes_per_frame = (int)((real32)sound_output.samples_per_second * sound_output.bytes_per_sample) 
+                                                    / game_update_hz;
+            real32 seconds_left_until_flip = (target_seconds_per_frame - from_begin_to_audio_seconds);
+            DWORD expected_bytes_until_flip = (DWORD)((seconds_left_until_flip / target_seconds_per_frame) 
+                                            * (real32)expected_sound_bytes_per_frame);
+
+            DWORD expected_frame_boundry_byte = play_cursor + expected_bytes_until_flip;
+
+            DWORD safe_write_cursor = write_cursor;
+            if(safe_write_cursor < play_cursor) {
+                safe_write_cursor += sound_output.secondary_buffer_size;
+            }
+            Assert(safe_write_cursor >= play_cursor);
+            safe_write_cursor += sound_output.safety_bytes;
+            
+            bool32 audio_card_is_low_latency = (safe_write_cursor < expected_frame_boundry_byte);
+
+            DWORD target_cursor = 0;
+            if (audio_card_is_low_latency) {
+                target_cursor = (expected_frame_boundry_byte + expected_sound_bytes_per_frame);
+            }
+            else {
+                target_cursor = (write_cursor + expected_sound_bytes_per_frame + sound_output.safety_bytes);
+            }
+            target_cursor = (target_cursor % sound_output.secondary_buffer_size);
+
+            DWORD bytes_to_write = 0;
+            if (byte_to_lock > target_cursor) {
+                bytes_to_write = (sound_output.secondary_buffer_size - byte_to_lock);
+                bytes_to_write += target_cursor;
+            }
+            else {
+                bytes_to_write = target_cursor - byte_to_lock;
+            }
+            Game_Sound_Output_Buffer sound_buffer = {};
+            sound_buffer.samples_per_second = sound_output.samples_per_second;
+            sound_buffer.sample_count = bytes_to_write / sound_output.bytes_per_sample;
+            sound_buffer.samples = sound_samples;
+            game_state->tone_hz = 512;
+
+            DEBUG_output_sound(game_state, &sound_buffer, game_state->tone_hz);
+            // READY FOR DLL
+            /*
+            if (game.getSoundSamples) {
+
+            }
+            */
+            win32_fillSoundBuffer(&sound_output, byte_to_lock, bytes_to_write, &sound_buffer);
+        }
+
+
         MSG msg;
         while (PeekMessageA(&msg, window, 0, 0, PM_REMOVE) > 0)
         {
@@ -468,6 +683,14 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
         );
 
         render_gradient(DEBUF_X_OFFSET);
+
+        LARGE_INTEGER work_counter = win32_getWallClock();
+        real32 work_seconds_elapsed = win32_getSecondsElapsed(last_counter, work_counter);
+
+
+        LARGE_INTEGER end_counter = win32_getWallClock();
+        real32 ms_per_frame = 1000.0f * win32_getSecondsElapsed(last_counter, end_counter);
+        last_counter = end_counter;
     }
 
     return 0;
