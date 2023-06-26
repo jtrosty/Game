@@ -3,7 +3,7 @@
 internal void
 gameOutputSound(Game_State* game_state, Game_Sound_Output_Buffer* sound_buffer, int tone_hz)
 {
-    i16 tone_volume = 3000;
+    i16 tone_volume = 1000;
     int wave_period = sound_buffer->samples_per_second/tone_hz;
 
     i16* sample_out = sound_buffer->samples;
@@ -54,6 +54,23 @@ renderWeirdGradient(Game_Offscreen_Buffer* buffer, int blue_offset, int green_of
     }
 }
 
+static void renderPlayer(Game_Offscreen_Buffer* buffer, int player_x, int player_y) {
+    u8* end_of_buffer = (u8*)buffer->memory + (buffer->pitch * buffer->height);
+    u32 color = 0xFF00ff00; //FFFFFF;
+    
+    int top = player_y;
+    int bottom = player_y + 10;
+    for (int x = player_x; x < player_x + 10; ++x) {
+        u8* pixel = ((u8*)buffer->memory + (x * buffer->bytes_per_pixel) + (top * buffer->pitch));
+        for (int y = top; y < bottom; ++y) {
+            if ((pixel >= buffer->memory) && ((pixel + 4) <= end_of_buffer)) {
+                *(u32*)pixel = color;
+            }
+            pixel += buffer->pitch;
+        }
+    }
+}
+
 extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 {
     Game_State* game_state = (Game_State*)memory->permanent_storage;
@@ -70,11 +87,11 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         }
         */
        
-        game_state->tone_hz = 200;
+        game_state->tone_hz = 512;
         game_state->t_sine = 0.0f;
 
-        game_state->player_x = 100;
-        game_state->player_y = 100;
+        game_state->player_x = 200;
+        game_state->player_y = 350;
 
         // TODO(casey): This may be more appropriate to do in the platform layer
         memory->is_initialized = true;
@@ -109,7 +126,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         // Input.AButtonHalfTransitionCount;
 
         game_state->player_x += (int)(4.0f*controller->left_stick_average_x);
-        game_state->player_y -= (int)(4.0f*controller->left_stick_average_y);
+        game_state->player_y += (int)(4.0f*controller->left_stick_average_y);
         if(game_state->t_jump > 0)
         {
             game_state->player_y += (int)(5.0f*sinf(0.5f*Pi32*game_state->t_jump));
@@ -122,7 +139,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     }
     
     renderWeirdGradient(buffer, game_state->blue_offset, game_state->green_offset);
-    //RenderPlayer(buffer, game_state->player_x, game_state->player_y);
+    renderPlayer(buffer, game_state->player_x, game_state->player_y);
 
     //RenderPlayer(buffer, input->mouse_x, input->mouse_y);
 

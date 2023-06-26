@@ -163,12 +163,17 @@ static void win32_process_keyboard_message(Game_Button_State* new_state, bool32 
 static Win32_Game_Code win32_loadGameCode(char* source_dll_name, char* temp_dll_name) {
     Win32_Game_Code result = {};
     //result.dll_last_write_time = win32
+    result.dll_last_write_time = win32_getLastWriteTime(source_dll_name);
+
     CopyFile(source_dll_name, temp_dll_name, FALSE);
 
     result.game_code_dll = LoadLibraryA(temp_dll_name);
+
     if (result.game_code_dll) {
-        result.update_and_render_fn = (game_update_and_render*)GetProcAddress(result.game_code_dll, "GameUpdateAndRender");
-        result.get_sound_samples_fn = (game_get_sound_samples*)GetProcAddress(result.game_code_dll, "GameGetSoundSamples");
+        result.update_and_render_fn = (game_update_and_render*)
+            GetProcAddress(result.game_code_dll, "GameUpdateAndRender");
+        result.get_sound_samples_fn = (game_get_sound_samples*)
+            GetProcAddress(result.game_code_dll, "GameGetSoundSamples");
 
         result.is_valid = (result.update_and_render_fn && result.update_and_render_fn);
     }
@@ -375,6 +380,70 @@ inline real32 win32_getSecondsElapsed(LARGE_INTEGER start, LARGE_INTEGER end) {
 //**************************** END Timing   ********************************//
 
 
+//**************************** DEBUG FILE SECTION******************************//
+DEBUG_PLATFORM_FREE_FILE_MEMORY(debug_platformFreeFileMemory) {
+    if (memory) {
+        VirtualFree(memory, 0, MEM_RELEASE);
+    }
+}
+
+DEBUG_PLATFORM_READ_ENTIRE_FILE(debug_platformReadEntireFile) {
+    Debug_Read_File_Result result = {};
+    HANDLE file_handle = CreateFileA(filename, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0);
+    if(file_handle != INVALID_HANDLE_VALUE) {
+        LARGE_INTEGER file_size;
+        if(GetFileSizeEx(file_handle, &file_size)) {
+            u32 file_size_32 = safeTruncateU64(file_size.QuadPart);
+            result.contents = VirtualAlloc(0, file_size_32, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+            if(result.contents) {
+                DWORD bytes_read;
+                if(ReadFile(file_handle, result.contents, file_size_32, &bytes_read, 0) && file_size_32 == bytes_read) {
+                    result.contents_size = file_size_32;
+                }
+                else {
+                    debug_platformFreeFileMemory(Thread, result.contents);
+                    result.contents = 0;
+                }
+            }
+            else {
+                // TODO: Logging
+            }
+        }
+        else {
+            // TODO: Logging
+        }
+
+        CloseHandle(file_handle);
+    }
+    else {
+        // TODO: logging
+    }
+    return result;
+}
+
+DEBUG_PLATFORM_WRITE_ENTIRE_FILE(debug_platformWriteEntireFile) {
+    bool32 result = false;
+    HANDLE file_handle = CreateFileA(filename, GENERIC_WRITE, 0, 0, CREATE_ALWAYS, 0, 0);
+    if(file_handle != INVALID_HANDLE_VALUE) {
+        DWORD bytes_written;
+        if(WriteFile(file_handle, memory, memory_size, &bytes_written, 0)) {
+            // NOTE: file read succesfully
+            result = (bytes_written == memory_size);
+        }
+        else {
+            // TODO: Logging
+        }
+        CloseHandle(file_handle);
+    }
+    else {
+        // TODO: logging
+    }
+    return result;
+}
+
+
+//******************************** END DEBUG ************************************//
+
 static void render_gradient(int x_offset) {
     for (int i = 0; i < render_buffer.num_of_pixels; i++) {
         render_buffer.pixels[i] = 0xFF0000ff + x_offset++;
@@ -405,17 +474,65 @@ static void DEBUG_output_sound(Game_State* game_state, Game_Sound_Output_Buffer*
 }
 //*************************************************************************************
 
+//************************* DISPLAY CODE ************************************************************
+static void win32_resizeDIBSection(Win32_Offscreen_Buffer* buffer, int width, int height) {
+    if (buffer->memory) {
+        VirtualFree(buffer->memory, 0, MEM_RELEASE);
+    }
+    buffer->width = width;
+    buffer->height = height;
+
+    int bytes_per_pixel = 4;
+    buffer->bytes_per_pixel = bytes_per_pixel;
+
+    // bmi Header
+    buffer->info.bmiHeader.biSize = sizeof(buffer->info.bmiHeader);
+    buffer->info.bmiHeader.biWidth = buffer->width;
+    buffer->info.bmiHeader.biHeight = buffer->height;
+    buffer->info.bmiHeader.biPlanes = 1; // Must be set to 1
+    buffer->info.bmiHeader.biBitCount = 32; // 32 bits per pixel
+    buffer->info.bmiHeader.biCompression = BI_RGB; // Uncompressed
+    buffer->info.bmiHeader.biSizeImage = 0; // 0 for uncompressed
+    buffer->info.bmiHeader.biXPelsPerMeter = 0; // Not needed
+    buffer->info.bmiHeader.biYPelsPerMeter = 0; // Not needed
+    buffer->info.bmiHeader.biClrUsed = 0; // Not needed, this gets us the maximum amount of colors.
+    buffer->info.bmiHeader.biClrImportant = 0; // All colors are important.
+
+    int bitmap_memory_size = (buffer->width * buffer->height) * bytes_per_pixel;
+    buffer->memory = VirtualAlloc(0, bitmap_memory_size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+    buffer->pitch = width * bytes_per_pixel;
+}
+
+static void win32_displayBufferInWindow(Win32_Offscreen_Buffer* buffer, HDC device_context, int window_width, int window_height) {
+    StretchDIBits(device_context, 
+                  0, 0, buffer->width, buffer->height,
+                  0, 0, buffer->width, buffer->height,
+                  buffer->memory,
+                  &buffer->info,
+                  DIB_RGB_COLORS, SRCCOPY);
+}
+
+static Win32_Window_Dimension win32_getWindowDimension(HWND window) {
+    Win32_Window_Dimension result;
+    RECT client_rect;
+    GetClientRect(window, &client_rect);
+    result.width = client_rect.right - client_rect.left;
+    result.height = client_rect.bottom - client_rect.top;
+    return result;
+}
+//*************************************************************************************
+
 int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
     // Register the window class.
     //const wchar_t CLASS_NAME[]  = L"Core Game Trost";
     // REMOVE
-
-
-
     int DEBUF_X_OFFSET = 0;
     
     WNDCLASSA window_class = {0};
+
+    win32_resizeDIBSection(&global_back_buffer, 1280, 720);
+
     window_class.style = CS_HREDRAW|CS_VREDRAW;
     window_class.lpfnWndProc   = WindowProc;
     window_class.hInstance = hInstance;
@@ -501,11 +618,9 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     Game_Memory game_memory = {};
     game_memory.permanent_storage_size = Megabytes(64);
     game_memory.transient_storage_size = Gigabytes(1);
-    /*
-    game_memory.DEBUG_platformFreeFileMemory = DEBUG_PLATFORM_FREE_FILE_MEMORY;
-    game_memory.DEBUG_platformReadEntireFile = DEBUG_PLATFORM_READ_ENTIRE_FILE;
-    game_memory.DEBUG_platformWriteEntireFile = DEBUG_PLATFORM_WRITE_ENTIRE_FILE;
-    */
+    game_memory.DEBUG_platformFreeFileMemory = debug_platformFreeFileMemory;
+    game_memory.DEBUG_platformReadEntireFile = debug_platformReadEntireFile;
+    game_memory.DEBUG_platformWriteEntireFile = debug_platformWriteEntireFile;
 
     win32_state.total_size = game_memory.permanent_storage_size + game_memory.transient_storage_size;
     win32_state.game_memory_block = VirtualAlloc(base_address, (size_t)win32_state.total_size, 
@@ -745,7 +860,6 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
             // READY FOR DLL
             if (game.get_sound_samples_fn) {
                 game.get_sound_samples_fn(&thread, &game_memory, &sound_buffer);
-
             }
             win32_fillSoundBuffer(&sound_output, byte_to_lock, bytes_to_write, &sound_buffer);
         }
@@ -775,18 +889,12 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
         old_input = temp;
 
         // Render 
-        StretchDIBits(
-            hdc,                                // hdc,
-            0, 0,                               // x and y dest,
-            render_buffer.width, render_buffer.height, // Destwidth and height,
-            0, 0,                               // x and y src,
-            render_buffer.width, render_buffer.height, // src width and hegith,
-            render_buffer.pixels,              // *lpbmi,
-            &render_buffer.bitmap_info,         // bitmap infor,
-            DIB_RGB_COLORS,                     // iUsage,
-            SRCCOPY                             // rop
-        );
 
+        Win32_Window_Dimension dimension = win32_getWindowDimension(window);
+        HDC device_context = GetDC(window);
+        win32_displayBufferInWindow(&global_back_buffer, device_context,
+                                    dimension.width, dimension.height);
+        ReleaseDC(window, device_context);
         //render_gradient(DEBUF_X_OFFSET);
 
         LARGE_INTEGER work_counter = win32_getWallClock();
@@ -950,6 +1058,8 @@ static LRESULT CALLBACK WindowProc(HWND window, UINT uMsg, WPARAM wParam, LPARAM
             RUNNING = 0;
         } break;
         case WM_SIZE: {
+            // TODO: Remove?
+            /*
             RECT rect;
             GetClientRect(window, &rect);
             render_buffer.width = rect.right - rect.left;
@@ -973,19 +1083,16 @@ static LRESULT CALLBACK WindowProc(HWND window, UINT uMsg, WPARAM wParam, LPARAM
             render_buffer.bitmap_info.bmiHeader.biYPelsPerMeter = 0; // Not needed
             render_buffer.bitmap_info.bmiHeader.biClrUsed = 0; // Not needed, this gets us the maximum amount of colors.
             render_buffer.bitmap_info.bmiHeader.biClrImportant = 0; // All colors are important.
+            */
         } break;
         case WM_PAINT:
             {
-                /*
                 PAINTSTRUCT ps;
-                HDC hdc = BeginPaint(hwnd, &ps);
+                HDC hdc = BeginPaint(window, &ps);
+                Win32_Window_Dimension dimension = win32_getWindowDimension(window);
+                win32_displayBufferInWindow(&global_back_buffer, hdc, dimension.width, dimension.height);
 
-                // All painting occurs here, between BeginPaint and EndPaint.
-
-                FillRect(hdc, &ps.rcPaint, (HBRUSH) (COLOR_WINDOW+1));
-
-                EndPaint(hwnd, &ps);
-                */
+                EndPaint(window, &ps);
             }
         default: {
             result = DefWindowProcA(window, uMsg, wParam, lParam);

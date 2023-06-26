@@ -67,6 +67,11 @@ typedef DEBUG_PLATFORM_READ_ENTIRE_FILE(debug_platform_read_entire_file);
 #define DEBUG_PLATFORM_WRITE_ENTIRE_FILE(name) bool32 name(Thread_Context* thread, char* filename, uint32 memory_size, void* memory)
 typedef DEBUG_PLATFORM_WRITE_ENTIRE_FILE(debug_platform_write_entire_file);
 
+inline u32 safeTruncateU64(u64 value) {
+    Assert(value <= 0xFFFFFFFF);
+    u32 result = (u32)value;
+    return result;
+}
 
 struct Game_Offscreen_Buffer
 {
