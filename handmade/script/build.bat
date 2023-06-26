@@ -1,6 +1,6 @@
 @echo off
 
-set CommonCompilerFlags=-MTd -nologo -Gm- -GR- -EHa- -Od -Oi -WX -W4 -wd4201 -wd4100 -wd4189 -DHANDMADE_INTERNAL=1 -DHANDMADE_SLOW=1 -DHANDMADE_WIN32=1 -FC -Z7
+set CommonCompilerFlags=-MTd -nologo -Gm- -GR- -EHa- -Od -Oi -WX -W4 -wd4505 -wd4244 -wd4201 -wd4100 -wd4189 -DHANDMADE_INTERNAL=1 -DHANDMADE_SLOW=1 -DHANDMADE_WIN32=1 -FC -Z7
 set InitialCompilerFlags=-nologo -Zi -FC -DEVELOPMENT 
 set CommonLinkerFlags= -incremental:no -opt:ref user32.lib gdi32.lib winmm.lib
 
@@ -15,8 +15,8 @@ REM cl %CommonCompilerFlags% ..\handmade\code\win32_handmade.cpp /link -subsyste
 REM 64-bit build
 del *.pdb > NUL 2> NUL
 cl %InitialCompilerFlags% -o core ..\src\win32_platform.cpp -Fmwin32_platform.map /link  %CommonLinkerFlags%
-REM cl %CommonCompilerFlags% ..\src\handmade.cpp -Fmhandmade.map -LD /link -incremental:no -opt:ref -PDB:handmade_%random%.pdb -EXPORT:GameGetSoundSamples -EXPORT:GameUpdateAndRender
-REM cl %CommonCompilerFlags% ..\src\win32_handmade.cpp -Fmwin32_handmade.map /link %CommonLinkerFlags%
+cl %CommonCompilerFlags% ..\src\core.cpp -Fmcore.map -LD /link -incremental:no -opt:ref -PDB:core_%random%.pdb -EXPORT:GameGetSoundSamples -EXPORT:GameUpdateAndRender
+cl %CommonCompilerFlags% ..\src\win32_platform.cpp -Fmwin32_platform.map /link %CommonLinkerFlags%
 popd
 
 

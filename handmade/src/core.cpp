@@ -61,14 +61,16 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     {
         char* filename = __FILE__;
         
+        /*
         Debug_Read_File_Result file = memory->DEBUG_platformReadEntireFile(thread, filename);
         if(file.contents)
         {
             memory->DEBUG_platformWriteEntireFile(thread, "test.out", file.contents_size, file.contents);
             memory->DEBUG_platformFreeFileMemory(thread, file.contents);
         }
+        */
        
-        game_state->tone_hz = 512;
+        game_state->tone_hz = 200;
         game_state->t_sine = 0.0f;
 
         game_state->player_x = 100;

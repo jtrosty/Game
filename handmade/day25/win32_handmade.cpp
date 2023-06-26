@@ -986,7 +986,7 @@ WinMain(HINSTANCE Instance,
     GlobalPerfCountFrequency = PerfCountFrequencyResult.QuadPart;
 
     Win32GetEXEFileName(&Win32State);
-
+//
     char SourceGameCodeDLLFullPath[WIN32_STATE_FILE_NAME_COUNT];
     Win32BuildEXEPathFileName(&Win32State, "handmade.dll",
                               sizeof(SourceGameCodeDLLFullPath), SourceGameCodeDLLFullPath);

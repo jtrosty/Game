@@ -8,16 +8,18 @@
     Gamepad basics: done 15 june
     Keyboard: done 16 June
     Sound: We have a sound buffer 25 June
-    frame rate: 
+    frame rate:  I kind of have frames
     dll stuff: 
     saved last 20 secs
     tile map
 */
+#include "core.h"
 
 #include <windows.h>
 #include <Xinput.h>
 #include <dsound.h>
-#include "core.h"
+#include <stdio.h>
+
 #include "win32_platform.h"
 
 struct Win32_Offscreen_Buffer {
@@ -155,6 +157,86 @@ static void win32_process_keyboard_message(Game_Button_State* new_state, bool32 
     }
 }
 //******************************** END INPUT Section ************************************//
+
+//**************************** Game Load and Save Section ******************************//
+
+static Win32_Game_Code win32_loadGameCode(char* source_dll_name, char* temp_dll_name) {
+    Win32_Game_Code result = {};
+    //result.dll_last_write_time = win32
+    CopyFile(source_dll_name, temp_dll_name, FALSE);
+
+    result.game_code_dll = LoadLibraryA(temp_dll_name);
+    if (result.game_code_dll) {
+        result.update_and_render_fn = (game_update_and_render*)GetProcAddress(result.game_code_dll, "GameUpdateAndRender");
+        result.get_sound_samples_fn = (game_get_sound_samples*)GetProcAddress(result.game_code_dll, "GameGetSoundSamples");
+
+        result.is_valid = (result.update_and_render_fn && result.update_and_render_fn);
+    }
+
+    if (!result.is_valid) {
+        result.update_and_render_fn = 0;
+        result.get_sound_samples_fn = 0;
+    }
+    
+    return result;
+}
+
+static void Win32_unloadGameCode(Win32_Game_Code* game_code) {
+    if (game_code->game_code_dll) {
+        FreeLibrary(game_code->game_code_dll);
+        game_code->game_code_dll = 0;
+    }
+    game_code->is_valid = false;
+    game_code->update_and_render_fn = 0;
+    game_code->get_sound_samples_fn = 0;
+}
+
+static void catStrings(size_t source_a_count, char* source_a, 
+                       size_t source_b_count, char* source_b,
+                       size_t dest_count, char* dest) {
+    for (int index = 0; index < source_a_count; ++index) {
+        *dest++ = *source_a++;
+    }
+    for (int index = 0; index < source_b_count; ++index) {
+        *dest++ = *source_b++;
+    }
+    *dest++ = 0;
+}
+
+static int stringLength(char* string) {
+    int count = 0; 
+    while (*string++) {
+        ++count;
+    }
+    return count;
+}
+
+static void win32_buildEXEPathFileName(Win32_State* state, char* filename, int dest_count, char* dest) {
+    catStrings(state->one_past_last_EXE_filename_slash - state->EXE_file_name, state->EXE_file_name, 
+                stringLength(filename), filename, dest_count, dest);
+}
+
+inline FILETIME win32_getLastWriteTime(char* filename) {
+    FILETIME last_write_time = {};
+    WIN32_FILE_ATTRIBUTE_DATA data;
+    if (GetFileAttributesEx(filename, GetFileExInfoStandard, &data)) {
+        last_write_time = data.ftLastWriteTime;
+    }
+    return last_write_time;
+}
+
+static void win32_getEXEFileName(Win32_State* state) {
+    DWORD size_of_filename = GetModuleFileNameA(0, state->EXE_file_name, sizeof(state->EXE_file_name));
+    state->one_past_last_EXE_filename_slash = state->EXE_file_name;
+    for (char* scan = state->EXE_file_name; *scan; ++scan) {
+        if (*scan == '\\') {
+            state->one_past_last_EXE_filename_slash = scan + 1;
+        }
+    }
+}
+
+
+//********************************** END Section ***************************************//
 
 //******************************* Direct Sound Section *********************************//
 static void win32_init_direct_sound(HWND window, i32 samples_per_second, i32 buffer_size) {
@@ -328,10 +410,6 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     // Register the window class.
     //const wchar_t CLASS_NAME[]  = L"Core Game Trost";
     // REMOVE
-    Win32_State win32_state = {};
-    LARGE_INTEGER perf_count_frequency_result;
-    QueryPerformanceCounter(&perf_count_frequency_result);
-    global_perf_count_frequency = perf_count_frequency_result.QuadPart;
 
 
 
@@ -373,19 +451,29 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 
    
    // Window monitor refresh
-   LARGE_INTEGER perf_count_frequency_result;
-   QueryPerformanceFrequency(&perf_count_frequency_result);
-   global_perf_count_frequency = perf_count_frequency_result.QuadPart;
+    Win32_State win32_state = {};
+    LARGE_INTEGER perf_count_frequency_result;
+    QueryPerformanceCounter(&perf_count_frequency_result);
+    global_perf_count_frequency = perf_count_frequency_result.QuadPart;
 
-   int monitor_refresh_hz = 60;
-   HDC refresh_dc = GetDC(window);
-   int win32_refresh_rate = GetDeviceCaps(refresh_dc, VREFRESH);
-   ReleaseDC(window, refresh_dc);
-   if (win32_refresh_rate > 1) {
-        monitor_refresh_hz = win32_refresh_rate;
-   }
-   real32 game_update_hz = (monitor_refresh_hz / 2.0f);
-   real32 target_seconds_per_frame = 1.0f / (real32)game_update_hz;
+    win32_getEXEFileName(&win32_state);
+
+    // Game code loading
+    char source_game_code_dll_full_path[WIN32_STATE_FILE_NAME_COUNT];
+    win32_buildEXEPathFileName(&win32_state, "core.dll", sizeof(source_game_code_dll_full_path), source_game_code_dll_full_path);
+
+    char temp_game_code_dll_full_path[WIN32_STATE_FILE_NAME_COUNT];
+    win32_buildEXEPathFileName(&win32_state, "core_temp.dll", sizeof(temp_game_code_dll_full_path), temp_game_code_dll_full_path);
+
+    int monitor_refresh_hz = 60;
+    HDC refresh_dc = GetDC(window);
+    int win32_refresh_rate = GetDeviceCaps(refresh_dc, VREFRESH);
+    ReleaseDC(window, refresh_dc);
+    if (win32_refresh_rate > 1) {
+            monitor_refresh_hz = win32_refresh_rate;
+    }
+    real32 game_update_hz = (monitor_refresh_hz / 2.0f);
+    real32 target_seconds_per_frame = 1.0f / (real32)game_update_hz;
 
     // Setup sound
     Win32_Sound_Output sound_output = {};
@@ -440,12 +528,22 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 
    LARGE_INTEGER last_counter = win32_getWallClock();
    LARGE_INTEGER flip_wall_clock = win32_getWallClock();
+   uint64 last_cycle_count = __rdtsc();
 
    // DEBUG
    Game_State* game_state = (Game_State*)game_memory.permanent_storage;
+   Win32_Game_Code game = win32_loadGameCode(source_game_code_dll_full_path, temp_game_code_dll_full_path);
+   u32 load_counter = 0;
 
     // Run the message loop.
     while (RUNNING) {
+
+        FILETIME new_dll_write_time = win32_getLastWriteTime(source_game_code_dll_full_path);
+        if(CompareFileTime(&new_dll_write_time, &game.dll_last_write_time) != 0) {
+            Win32_unloadGameCode(&game);
+            game = win32_loadGameCode(source_game_code_dll_full_path, temp_game_code_dll_full_path);
+            load_counter = 0;
+        }
 
         //******************** INPUT SECTION ***************************//
         Game_Controller_Input* new_keyboard = getController(new_input, 0);
@@ -532,21 +630,25 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
                 new_controller->is_connected = false;
             }
 
+/*
             // DEBUG Controlls
             if (new_controller->left_stick_average_x) {
-                DEBUF_X_OFFSET += (100 * new_controller->left_stick_average_x);
+                DEBUF_X_OFFSET += (100.0 * new_controller->left_stick_average_x);
             }
             if (new_controller->action_down.ended_down) {
                 // A is down
-                DEBUF_X_OFFSET += 100;
+                DEBUF_X_OFFSET += 100.0;
             }
             if (new_keyboard->move_up.ended_down || new_keyboard->move_up.half_transition_count ) {
-                DEBUF_X_OFFSET += 100;
+                DEBUF_X_OFFSET += 100.0;
             }
             if (new_keyboard->move_down.ended_down || new_keyboard->move_up.half_transition_count) {
-                DEBUF_X_OFFSET -= 100;
+                DEBUF_X_OFFSET -= 100.0;
             }
+            */
         }
+
+        Thread_Context thread = {};
 
         Game_Offscreen_Buffer buffer = {};
         buffer.memory = global_back_buffer.memory;
@@ -554,6 +656,10 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
         buffer.height = global_back_buffer.height;
         buffer.pitch = global_back_buffer.pitch;
         buffer.bytes_per_pixel = global_back_buffer.bytes_per_pixel;
+
+        if(game.update_and_render_fn) {
+            game.update_and_render_fn(&thread, &game_memory, new_input, &buffer);
+        }
 
 
         // Sound
@@ -633,15 +739,14 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
             sound_buffer.samples_per_second = sound_output.samples_per_second;
             sound_buffer.sample_count = bytes_to_write / sound_output.bytes_per_sample;
             sound_buffer.samples = sound_samples;
-            game_state->tone_hz = 512;
+            //game_state->tone_hz = 512;
 
-            DEBUG_output_sound(game_state, &sound_buffer, game_state->tone_hz);
+            //DEBUG_output_sound(game_state, &sound_buffer, game_state->tone_hz);
             // READY FOR DLL
-            /*
-            if (game.getSoundSamples) {
+            if (game.get_sound_samples_fn) {
+                game.get_sound_samples_fn(&thread, &game_memory, &sound_buffer);
 
             }
-            */
             win32_fillSoundBuffer(&sound_output, byte_to_lock, bytes_to_write, &sound_buffer);
         }
 
@@ -682,7 +787,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
             SRCCOPY                             // rop
         );
 
-        render_gradient(DEBUF_X_OFFSET);
+        //render_gradient(DEBUF_X_OFFSET);
 
         LARGE_INTEGER work_counter = win32_getWallClock();
         real32 work_seconds_elapsed = win32_getSecondsElapsed(last_counter, work_counter);
@@ -691,6 +796,20 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
         LARGE_INTEGER end_counter = win32_getWallClock();
         real32 ms_per_frame = 1000.0f * win32_getSecondsElapsed(last_counter, end_counter);
         last_counter = end_counter;
+
+        uint64 end_cycle_count = __rdtsc();
+        uint64 cycles_elapsed = end_cycle_count - last_cycle_count;
+        last_cycle_count = end_cycle_count;
+        
+        //real64 fps = perf_count_frequency_result / (end_counter.QuadPart - last_counter.QuadPart);
+        real64 fps =0.0;
+        real64 mega_cycles_per_frame = ((real64)cycles_elapsed / (1000.0f * 1000.0f));
+
+        char FPS_buffer[256];
+        _snprintf_s(FPS_buffer, sizeof(FPS_buffer), 
+                    " %.02fms/f, %.02ff/s, %.02fmc/f\n", ms_per_frame, fps, mega_cycles_per_frame); 
+        OutputDebugStringA(FPS_buffer);
+        printf(FPS_buffer);
     }
 
     return 0;
