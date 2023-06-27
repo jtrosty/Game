@@ -1,5 +1,28 @@
 #include "core.h"
 
+struct Tile_Map {
+
+};
+
+
+struct World {
+    real32 tile_side_in_meters;
+    real32 tile_side_in_pixels;
+    i32 count_x;
+    i32 count_y;
+
+    real32 upper_left_x;
+    real32 upper_left_y;
+
+    i32 tile_map_count_x;
+    i32 tile_map_count_y;
+
+
+    Tile_Map* tile_map;
+};
+
+
+
 internal void
 gameOutputSound(Game_State* game_state, Game_Sound_Output_Buffer* sound_buffer, int tone_hz)
 {
@@ -51,6 +74,20 @@ renderWeirdGradient(Game_Offscreen_Buffer* buffer, int blue_offset, int green_of
         }
         
         row += buffer->pitch;
+    }
+}
+
+static void renderRectangle(Game_Offscreen_Buffer* buffer, int x, int y, int width, int height, u32 color) {
+    u8* end_of_buffer = (u8*)buffer->memory + (buffer->pitch * buffer->height);
+    int top = y;
+    int bottom = y + height;
+    for (int x = x; x < (x + width); ++x) {
+        u8* pixel = ((u8*)buffer->memory + (x * buffer->bytes_per_pixel) + (top * buffer->pitch));
+        for (int y = top; y < bottom; ++y) {
+            if ((pixel >= buffer->memory) && ((pixel + 4) <= end_of_buffer)) {
+                pixel += buffer->pitch;
+            }
+        }
     }
 }
 
