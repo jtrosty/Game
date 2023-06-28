@@ -1,30 +1,7 @@
 #include "core.h"
 
-struct Tile_Map {
 
-};
-
-
-struct World {
-    real32 tile_side_in_meters;
-    real32 tile_side_in_pixels;
-    i32 count_x;
-    i32 count_y;
-
-    real32 upper_left_x;
-    real32 upper_left_y;
-
-    i32 tile_map_count_x;
-    i32 tile_map_count_y;
-
-
-    Tile_Map* tile_map;
-};
-
-
-
-internal void
-gameOutputSound(Game_State* game_state, Game_Sound_Output_Buffer* sound_buffer, int tone_hz)
+internal void gameOutputSound(Game_State* game_state, Game_Sound_Output_Buffer* sound_buffer, int tone_hz)
 {
     i16 tone_volume = 1000;
     int wave_period = sound_buffer->samples_per_second/tone_hz;
@@ -77,18 +54,41 @@ renderWeirdGradient(Game_Offscreen_Buffer* buffer, int blue_offset, int green_of
     }
 }
 
-static void renderRectangle(Game_Offscreen_Buffer* buffer, int x, int y, int width, int height, u32 color) {
-    u8* end_of_buffer = (u8*)buffer->memory + (buffer->pitch * buffer->height);
-    int top = y;
-    int bottom = y + height;
-    for (int x = x; x < (x + width); ++x) {
-        u8* pixel = ((u8*)buffer->memory + (x * buffer->bytes_per_pixel) + (top * buffer->pitch));
-        for (int y = top; y < bottom; ++y) {
-            if ((pixel >= buffer->memory) && ((pixel + 4) <= end_of_buffer)) {
-                pixel += buffer->pitch;
-            }
-        }
+static void drawRectangle(Game_Offscreen_Buffer* buffer, 
+                            real32 real_min_x, real32 real_min_y, real32 real_max_x, real32 real_max_y,
+                            real32 r, real32 g, real32 b) {
+
+    i32 min_x = roundReal32ToInt32(real_min_x);
+    i32 min_y = roundReal32ToInt32(real_min_y);
+    i32 max_x = roundReal32ToInt32(real_max_x);
+    i32 max_y = roundReal32ToInt32(real_max_y);
+
+    if (min_x < 0) {
+        min_x = 0;
     }
+    if(min_y < 0) {
+        min_y = 0;
+    }
+    if (max_x > buffer->width) {
+        max_x = buffer->width;
+    }
+    if (max_y > buffer->height) {
+        max_y = buffer->height;
+    }
+
+    u32 color = ((roundReal32ToInt32(r * 255.0f) << 16) |
+                 (roundReal32ToInt32(g * 255.0F) << 8)  |
+                 (roundReal32ToInt32(b * 2550.f) << 0));
+
+    u8* row = ((u8*)buffer->memory +  min_x * buffer->bytes_per_pixel + min_y * buffer->pitch);
+    for (int y = min_y; y < max_y; ++y) {
+        u32* pixel = (u32*)row;
+        for (int x = min_x; x < max_x; ++x) {
+            *pixel++ = color;
+        }
+        row += buffer->pitch;
+    }
+    
 }
 
 static void renderPlayer(Game_Offscreen_Buffer* buffer, int player_x, int player_y) {
@@ -106,6 +106,7 @@ static void renderPlayer(Game_Offscreen_Buffer* buffer, int player_x, int player
             pixel += buffer->pitch;
         }
     }
+    drawRectangle(buffer, (real32)player_x, (real32)player_y, (real32)(player_x + 10),(real32)(player_y + 10), 0.0f, 1.0f, 1.0f);
 }
 
 extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
@@ -174,8 +175,44 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         }
         game_state->t_jump -= 0.033f;
     }
+
+    u32 tile_map[9][16] = 
+    {
+        {0, 0, 0, 0,   0, 0, 0, 0,   0, 0, 0, 0,  0, 0, 0, 0},
+        {0, 1, 1, 1,   1, 1, 1, 1,   1, 1, 1, 1,  1, 0, 0, 0},
+        {0, 1, 0, 0,   0, 0, 1, 0,   0, 0, 1, 0,  1, 1, 1, 0},
+        {0, 1, 0, 0,   0, 0, 1, 0,   0, 0, 1, 0,  0, 1, 1, 0},
+        {0, 1, 1, 0,   0, 0, 1, 0,   0, 0, 1, 0,  0, 1, 0, 0},
+        {0, 0, 1, 1,   1, 1, 1, 1,   1, 0, 1, 0,  0, 1, 1, 0},
+        {0, 0, 1, 1,   1, 0, 0, 0,   1, 1, 1, 1,  1, 1, 1, 0},
+        {0, 0, 0, 0,   0, 0, 0, 0,   0, 1, 1, 1,  0, 0, 0, 0},
+        {0, 0, 0, 0,   0, 0, 0, 0,   0, 0, 0, 0,  0, 0, 0, 0},
+    };
+
+
+    real32 upper_left_x = 10;
+    real32 upper_left_y = 10;
+    real32 tile_width = 60;
+    real32 tile_height = 60;
     
-    renderWeirdGradient(buffer, game_state->blue_offset, game_state->green_offset);
+    drawRectangle(buffer, 0.0f, 0.0f, (real32)buffer->width, (real32)buffer->height, 
+                    1.0f, 0.0f, 1.0f );
+    //renderWeirdGradient(buffer, game_state->blue_offset, game_state->green_offset);
+
+    for (int row = 0; row < 9; ++row) {
+        for (int col = 0; col < 16; ++col) {
+            u32 tile_id = tile_map[row][col];
+            real32 gray = 0.4f;
+            if(tile_id == 1) {
+                gray = 1.0f;
+            }
+            real32 min_x = upper_left_x + ((real32)col) * tile_width;
+            real32 min_y = upper_left_y + ((real32)row) * tile_height;
+            real32 max_x = min_x + tile_width;
+            real32 max_y = min_y + tile_height;
+            drawRectangle(buffer, min_x, min_y, max_x, max_y, gray, gray, gray);
+        }
+    }
     renderPlayer(buffer, game_state->player_x, game_state->player_y);
 
     //RenderPlayer(buffer, input->mouse_x, input->mouse_y);

@@ -1,7 +1,6 @@
 #include <stdint.h>
 #include <math.h>
 
-
 #define internal static 
 #define local_persist static 
 #define global_variable static
@@ -27,6 +26,8 @@ typedef uint32_t bool32;
 
 typedef float real32;
 typedef double real64;
+
+#include "core_math.h"
 
 #if HANDMADE_SLOW
 // TODO(casey): Complete assertion macro - don't worry everyone!
@@ -179,15 +180,59 @@ typedef GAME_GET_SOUND_SAMPLES(game_get_sound_samples);
 //
 //
 
-struct Game_State
-{
+struct Tile_Map {
+
+};
+
+
+struct World {
+    real32 tile_side_in_meters;
+    real32 tile_side_in_pixels;
+    i32 count_x;
+    i32 count_y;
+
+    real32 upper_left_x;
+    real32 upper_left_y;
+
+    i32 tile_map_count_x;
+    i32 tile_map_count_y;
+
+    Tile_Map* tile_map;
+};
+
+
+struct Canonical_Position {
+    
+};
+
+struct Tile_Map_Position {
+    // NOTE: These are fixed point tile locations. The hibh bits
+    // are the tile chunk index, and the low bits are the tile
+    // index in the chucnk.
+    u32 abs_tile_x;
+    u32 abs_tile_y;
+    u32 abs_tile_z;
+
+    // These are offset from the tile center.
+    real32 offset_x;
+    real32 offset_y;
+};
+
+struct Game_State {
+    World* world;
+
+    Tile_Map_Position player_p;
+
+    int player_x;
+    int player_y;
+    real32 t_jump;
+
+
+    // DEBUG stuff
     int tone_hz;
     int green_offset;
     int blue_offset;
     
     real32 t_sine;
 
-    int player_x;
-    int player_y;
-    real32 t_jump;
 };
