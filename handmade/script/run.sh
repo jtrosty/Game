@@ -1,4 +1,4 @@
-pushd build
-./core.exe
+pushd buildOSX
+./platform
 popd
 

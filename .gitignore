@@ -56,3 +56,7 @@ game2/raylib
 *.db
 *.suo
 *.sqlite
+
+# Xcode stuff  
+*.pbxproj
+*.xcuserstate

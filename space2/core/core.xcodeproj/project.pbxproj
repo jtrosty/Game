@@ -6,6 +6,19 @@
 	objectVersion = 55;
 	objects = {
 
+/* Begin PBXAggregateTarget section */
+		9A0AE86F2A3BF0D4005F854E /* core_mac_platform */ = {
+			isa = PBXAggregateTarget;
+			buildConfigurationList = 9A0AE8702A3BF0D4005F854E /* Build configuration list for PBXAggregateTarget "core_mac_platform" */;
+			buildPhases = (
+			);
+			dependencies = (
+			);
+			name = core_mac_platform;
+			productName = core_mac_platform;
+		};
+/* End PBXAggregateTarget section */
+
 /* Begin PBXGroup section */
 		9A0AE8682A3BEF12005F854E = {
 			isa = PBXGroup;
@@ -21,6 +34,11 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastUpgradeCheck = 1340;
+				TargetAttributes = {
+					9A0AE86F2A3BF0D4005F854E = {
+						CreatedOnToolsVersion = 13.4.1;
+					};
+				};
 			};
 			buildConfigurationList = 9A0AE86C2A3BEF12005F854E /* Build configuration list for PBXProject "core" */;
 			compatibilityVersion = "Xcode 13.0";
@@ -34,6 +52,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
+				9A0AE86F2A3BF0D4005F854E /* core_mac_platform */,
 			);
 		};
 /* End PBXProject section */
@@ -51,6 +70,22 @@
 			};
 			name = Release;
 		};
+		9A0AE8712A3BF0D4005F854E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		9A0AE8722A3BF0D4005F854E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -59,6 +94,15 @@
 			buildConfigurations = (
 				9A0AE86D2A3BEF12005F854E /* Debug */,
 				9A0AE86E2A3BEF12005F854E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		9A0AE8702A3BF0D4005F854E /* Build configuration list for PBXAggregateTarget "core_mac_platform" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9A0AE8712A3BF0D4005F854E /* Debug */,
+				9A0AE8722A3BF0D4005F854E /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
