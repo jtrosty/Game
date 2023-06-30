@@ -191,12 +191,11 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
 
     real32 upper_left_x = 10;
-    real32 upper_left_y = 10;
+    real32 upper_left_y = 100;
     real32 tile_width = 60;
     real32 tile_height = 60;
     
-    drawRectangle(buffer, 0.0f, 0.0f, (real32)buffer->width, (real32)buffer->height, 
-                    1.0f, 0.0f, 1.0f );
+    //drawRectangle(buffer, 0.0f, 0.0f, (real32)buffer->width, (real32)buffer->height, 1.0f, 0.0f, 1.0f );
     //renderWeirdGradient(buffer, game_state->blue_offset, game_state->green_offset);
 
     for (int row = 0; row < 9; ++row) {

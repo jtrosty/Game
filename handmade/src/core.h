@@ -139,6 +139,8 @@ struct Game_Input
     Game_Button_State mouse_buttons[5];
     i32 mouse_x, mouse_y, mouse_z;
 
+    real32 dt_for_frame;
+
     // TODO(casey): Insert clock values here.    
     Game_Controller_Input controllers[5];
 };

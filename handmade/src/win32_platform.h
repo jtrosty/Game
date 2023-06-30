@@ -20,3 +20,14 @@ struct Win32_Game_Code {
 
     bool32 is_valid;
 };
+
+struct Win32_Debug_Time_Marker {
+    DWORD output_play_cursor;
+    DWORD output_write_cursor;
+    DWORD output_location;
+    DWORD output_byte_count;
+    DWORD expected_flip_play_cursor;
+    
+    DWORD flipe_play_cursor;
+    DWORD flip_write_cursor;
+};
