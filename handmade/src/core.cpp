@@ -1,5 +1,9 @@
 #include "core.h"
+// Bug with offset of pixel colors, everythign got darker.
+//
 
+u32 const TILE_MAP_COUNT_X = 16;
+u32 const TILE_MAP_COUNT_Y = 9;
 
 internal void gameOutputSound(Game_State* game_state, Game_Sound_Output_Buffer* sound_buffer, int tone_hz)
 {
@@ -135,19 +139,38 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         memory->is_initialized = true;
     }
 
+    u32 tile_map[TILE_MAP_COUNT_Y][TILE_MAP_COUNT_X] = 
+    {
+        {0, 0, 0, 0,   0, 0, 0, 0,   0, 0, 0, 0,  0, 0, 0, 0},
+        {0, 1, 1, 1,   1, 1, 1, 1,   1, 1, 1, 1,  1, 0, 0, 0},
+        {0, 1, 0, 0,   0, 0, 1, 0,   0, 0, 1, 0,  1, 1, 1, 0},
+        {0, 1, 0, 0,   0, 0, 1, 0,   0, 0, 1, 0,  0, 1, 1, 0},
+        {0, 1, 1, 0,   0, 0, 1, 0,   0, 0, 1, 0,  0, 1, 0, 0},
+        {0, 0, 1, 1,   1, 1, 1, 1,   1, 0, 1, 0,  0, 1, 1, 0},
+        {0, 0, 1, 1,   1, 0, 0, 0,   1, 1, 1, 1,  1, 1, 1, 0},
+        {0, 0, 0, 0,   0, 0, 0, 0,   0, 1, 1, 1,  0, 0, 0, 0},
+        {0, 0, 0, 0,   0, 0, 0, 0,   0, 0, 0, 0,  0, 0, 0, 0},
+    };
+
+    real32 upper_left_x = 40;
+    real32 upper_left_y = 40;
+    real32 tile_width = 75;
+    real32 tile_height = 75;
+    
+    //drawRectangle(buffer, 0.0f, 0.0f, (real32)buffer->width, (real32)buffer->height, 1.0f, 0.0f, 1.0f );
+    //renderWeirdGradient(buffer, game_state->blue_offset, game_state->green_offset);
+
     for(int controller_index = 0;
         controller_index < ArrayCount(input->controllers);
         ++controller_index)
     {
         Game_Controller_Input* controller = getController(input, controller_index);
-        if(controller->is_analog)
-        {
+        if(controller->is_analog) {
             // NOTE(casey): Use analog movement tuning
             game_state->blue_offset += (int)(4.0f*controller->left_stick_average_x);
             game_state->tone_hz = 512 + (int)(128.0f*controller->left_stick_average_y);
         }
-        else
-        {
+        else {
             // NOTE(casey): Use digital movement tuning
             if(controller->move_left.ended_down)
             {
@@ -162,9 +185,31 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
         // Input.AButtonEndedDown;
         // Input.AButtonHalfTransitionCount;
+        float move_scale = 60.0f;
 
-        game_state->player_x += (int)(4.0f*controller->left_stick_average_x);
-        game_state->player_y += (int)(4.0f*controller->left_stick_average_y);
+        /*
+        int new_player_x = game_state->player_x + roundReal32ToInt32(move_scale * input->dt_for_frame * (controller->left_stick_average_x));
+        int new_player_y = game_state->player_y + roundReal32ToInt32(move_scale * input->dt_for_frame * (controller->left_stick_average_y));
+        int player_tile_x = truncateReal32ToInt32((game_state->player_x - upper_left_x) / tile_width);
+        int player_tile_y = truncateReal32ToInt32((game_state->player_y - upper_left_y) / tile_height);
+
+        bool32 is_valid = false;
+        if ((player_tile_x >= 0) && (player_tile_x < TILE_MAP_COUNT_X) &&
+            (player_tile_y >= 0) && (player_tile_y < TILE_MAP_COUNT_Y)) {
+                u32 tile_map_value = tile_map[player_tile_y][player_tile_y];
+                is_valid = (tile_map_value == 0);
+        }
+        if (is_valid) {
+            game_state->player_x = new_player_x;
+            game_state->player_y = new_player_y;
+        }
+        */
+
+
+        game_state->player_x += truncateReal32ToInt32(move_scale * (input->dt_for_frame) * (controller->left_stick_average_x));
+        game_state->player_y += truncateReal32ToInt32(move_scale * (input->dt_for_frame) * (controller->left_stick_average_y));
+
+
         if(game_state->t_jump > 0)
         {
             game_state->player_y += (int)(5.0f*sinf(0.5f*Pi32*game_state->t_jump));
@@ -175,29 +220,6 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         }
         game_state->t_jump -= 0.033f;
     }
-
-    u32 tile_map[9][16] = 
-    {
-        {0, 0, 0, 0,   0, 0, 0, 0,   0, 0, 0, 0,  0, 0, 0, 0},
-        {0, 1, 1, 1,   1, 1, 1, 1,   1, 1, 1, 1,  1, 0, 0, 0},
-        {0, 1, 0, 0,   0, 0, 1, 0,   0, 0, 1, 0,  1, 1, 1, 0},
-        {0, 1, 0, 0,   0, 0, 1, 0,   0, 0, 1, 0,  0, 1, 1, 0},
-        {0, 1, 1, 0,   0, 0, 1, 0,   0, 0, 1, 0,  0, 1, 0, 0},
-        {0, 0, 1, 1,   1, 1, 1, 1,   1, 0, 1, 0,  0, 1, 1, 0},
-        {0, 0, 1, 1,   1, 0, 0, 0,   1, 1, 1, 1,  1, 1, 1, 0},
-        {0, 0, 0, 0,   0, 0, 0, 0,   0, 1, 1, 1,  0, 0, 0, 0},
-        {0, 0, 0, 0,   0, 0, 0, 0,   0, 0, 0, 0,  0, 0, 0, 0},
-    };
-
-
-    real32 upper_left_x = 10;
-    real32 upper_left_y = 100;
-    real32 tile_width = 60;
-    real32 tile_height = 60;
-    
-    //drawRectangle(buffer, 0.0f, 0.0f, (real32)buffer->width, (real32)buffer->height, 1.0f, 0.0f, 1.0f );
-    //renderWeirdGradient(buffer, game_state->blue_offset, game_state->green_offset);
-
     for (int row = 0; row < 9; ++row) {
         for (int col = 0; col < 16; ++col) {
             u32 tile_id = tile_map[row][col];

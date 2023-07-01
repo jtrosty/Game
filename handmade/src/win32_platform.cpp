@@ -716,8 +716,8 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     
     WNDCLASSA window_class = {0};
 
-    const int INITIAL_WINDOW_X = 1600;
-    const int INITIAL_WINDOW_Y = 900;
+    const int INITIAL_WINDOW_X = 1280;
+    const int INITIAL_WINDOW_Y = 720;
 
     win32_resizeDIBSection(&global_back_buffer, INITIAL_WINDOW_X, INITIAL_WINDOW_Y);
 
@@ -974,8 +974,10 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
                 game.update_and_render_fn(&thread, &game_memory, new_input, &buffer);
             }
             //render_gradient(&buffer, DEBUF_X_OFFSET);
+#if 0
             win32_debugSyncDisplay(&buffer, ArrayCount(debug_time_markers), debug_time_markers, 
                 debug_time_marker_index, &sound_output, target_seconds_per_frame);
+#endif
 
             // Sound
             LARGE_INTEGER audio_wall_clock = win32_getWallClock();
