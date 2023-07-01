@@ -1171,7 +1171,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 #endif
             flip_wall_clock = win32_getWallClock();
 
-#if 1
+#if 0
             uint64 end_cycle_count = __rdtsc();
             uint64 cycles_elapsed = end_cycle_count - last_cycle_count;
             last_cycle_count = end_cycle_count;

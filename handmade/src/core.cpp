@@ -80,9 +80,9 @@ static void drawRectangle(Game_Offscreen_Buffer* buffer,
         max_y = buffer->height;
     }
 
-    u32 color = ((roundReal32ToInt32(r * 255.0f) << 16) |
-                 (roundReal32ToInt32(g * 255.0F) << 8)  |
-                 (roundReal32ToInt32(b * 2550.f) << 0));
+    u32 color = ((roundReal32ToUint32(r * 255.0f) << 16) |
+                 (roundReal32ToUint32(g * 255.0f) << 8)  |
+                 (roundReal32ToUint32(b * 255.0f) << 0));
 
     u8* row = ((u8*)buffer->memory +  min_x * buffer->bytes_per_pixel + min_y * buffer->pitch);
     for (int y = min_y; y < max_y; ++y) {
@@ -92,7 +92,6 @@ static void drawRectangle(Game_Offscreen_Buffer* buffer,
         }
         row += buffer->pitch;
     }
-    
 }
 
 static void renderPlayer(Game_Offscreen_Buffer* buffer, int player_x, int player_y) {
@@ -132,8 +131,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         game_state->tone_hz = 512;
         game_state->t_sine = 0.0f;
 
-        game_state->player_x = 200;
-        game_state->player_y = 350;
+        game_state->player_x = 50;
+        game_state->player_y = 50;
 
         // TODO(casey): This may be more appropriate to do in the platform layer
         memory->is_initialized = true;
@@ -141,14 +140,14 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
     u32 tile_map[TILE_MAP_COUNT_Y][TILE_MAP_COUNT_X] = 
     {
-        {0, 0, 0, 0,   0, 0, 0, 0,   0, 0, 0, 0,  0, 0, 0, 0},
-        {0, 1, 1, 1,   1, 1, 1, 1,   1, 1, 1, 1,  1, 0, 0, 0},
-        {0, 1, 0, 0,   0, 0, 1, 0,   0, 0, 1, 0,  1, 1, 1, 0},
-        {0, 1, 0, 0,   0, 0, 1, 0,   0, 0, 1, 0,  0, 1, 1, 0},
+        {1, 1, 1, 0,   0, 0, 0, 0,   0, 0, 0, 0,  0, 0, 0, 0},
+        {1, 1, 1, 1,   1, 1, 1, 1,   1, 1, 1, 1,  1, 0, 0, 0},
+        {1, 1, 1, 0,   0, 0, 1, 0,   0, 0, 1, 0,  1, 1, 1, 0},
+        {0, 0, 1, 0,   0, 0, 1, 0,   0, 0, 1, 0,  0, 1, 1, 0},
         {0, 1, 1, 0,   0, 0, 1, 0,   0, 0, 1, 0,  0, 1, 0, 0},
         {0, 0, 1, 1,   1, 1, 1, 1,   1, 0, 1, 0,  0, 1, 1, 0},
         {0, 0, 1, 1,   1, 0, 0, 0,   1, 1, 1, 1,  1, 1, 1, 0},
-        {0, 0, 0, 0,   0, 0, 0, 0,   0, 1, 1, 1,  0, 0, 0, 0},
+        {0, 0, 0, 0,   0, 0, 0, 0,   0, 1, 1, 1,  0, 0,- 0, 0},
         {0, 0, 0, 0,   0, 0, 0, 0,   0, 0, 0, 0,  0, 0, 0, 0},
     };
 
@@ -185,29 +184,33 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
         // Input.AButtonEndedDown;
         // Input.AButtonHalfTransitionCount;
-        float move_scale = 60.0f;
+        float move_scale = 200.0f;
 
-        /*
         int new_player_x = game_state->player_x + roundReal32ToInt32(move_scale * input->dt_for_frame * (controller->left_stick_average_x));
         int new_player_y = game_state->player_y + roundReal32ToInt32(move_scale * input->dt_for_frame * (controller->left_stick_average_y));
-        int player_tile_x = truncateReal32ToInt32((game_state->player_x - upper_left_x) / tile_width);
-        int player_tile_y = truncateReal32ToInt32((game_state->player_y - upper_left_y) / tile_height);
+        int player_tile_x = truncateReal32ToInt32((new_player_x - upper_left_x) / tile_width);
+        int player_tile_y = truncateReal32ToInt32((new_player_y - upper_left_y) / tile_height);
 
         bool32 is_valid = false;
         if ((player_tile_x >= 0) && (player_tile_x < TILE_MAP_COUNT_X) &&
             (player_tile_y >= 0) && (player_tile_y < TILE_MAP_COUNT_Y)) {
-                u32 tile_map_value = tile_map[player_tile_y][player_tile_y];
-                is_valid = (tile_map_value == 0);
+                u32 tile_map_value = tile_map[player_tile_y][player_tile_x];
+                is_valid = (tile_map_value == 1);
+                if (tile_map_value == 1) {
+                    is_valid = 1;
+                }
+                else {
+                    is_valid = 0;
+                }
         }
         if (is_valid) {
             game_state->player_x = new_player_x;
             game_state->player_y = new_player_y;
         }
-        */
 
 
-        game_state->player_x += truncateReal32ToInt32(move_scale * (input->dt_for_frame) * (controller->left_stick_average_x));
-        game_state->player_y += truncateReal32ToInt32(move_scale * (input->dt_for_frame) * (controller->left_stick_average_y));
+        //game_state->player_x += truncateReal32ToInt32(move_scale * (input->dt_for_frame) * (controller->left_stick_average_x));
+        //game_state->player_y += truncateReal32ToInt32(move_scale * (input->dt_for_frame) * (controller->left_stick_average_y));
 
 
         if(game_state->t_jump > 0)
