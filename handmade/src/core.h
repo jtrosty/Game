@@ -74,6 +74,7 @@ inline u32 safeTruncateU64(u64 value) {
     return result;
 }
 
+
 struct Game_Offscreen_Buffer
 {
     // NOTE(casey): Pixels are alwasy 32-bits wide, Memory Order BB GG RR XX
@@ -183,9 +184,8 @@ typedef GAME_GET_SOUND_SAMPLES(game_get_sound_samples);
 //
 
 struct Tile_Map {
-
+    u32* tiles;
 };
-
 
 struct World {
     real32 tile_side_in_meters;
@@ -223,7 +223,8 @@ struct Tile_Map_Position {
 struct Game_State {
     World* world;
 
-    Tile_Map_Position player_p;
+    i32 player_tile_x;
+    i32 player_tile_y;
 
     int player_x;
     int player_y;

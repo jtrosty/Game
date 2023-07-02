@@ -2,7 +2,7 @@
 // Bug with offset of pixel colors, everythign got darker.
 //
 
-u32 const TILE_MAP_COUNT_X = 16;
+u32 const TILE_MAP_COUNT_X = 17;
 u32 const TILE_MAP_COUNT_Y = 9;
 
 internal void gameOutputSound(Game_State* game_state, Game_Sound_Output_Buffer* sound_buffer, int tone_hz)
@@ -112,9 +112,96 @@ static void renderPlayer(Game_Offscreen_Buffer* buffer, int player_x, int player
     drawRectangle(buffer, (real32)player_x, (real32)player_y, (real32)(player_x + 10),(real32)(player_y + 10), 0.0f, 1.0f, 1.0f);
 }
 
+inline Tile_Map* getTileMap(World* world, i32 tile_map_x, i32 tile_map_y) { 
+    Tile_Map* tile_map = 0;
+    if ((tile_map_x >= 0) && (tile_map_x < world->tile_map_count_x) &&
+        (tile_map_y >= 0) && (tile_map_y < world->tile_map_count_y)) {
+            tile_map = &world->tile_map[tile_map_y * world->tile_map_count_x + tile_map_y];
+    }
+    return tile_map;
+}
+inline u32 getTileValueUnchecked(World* world, Tile_Map* tile_map, i32 tile_x, i32 tile_y) {
+    Assert(tile_map);
+    Assert((tile_x = 0) && (tile_x < world->count_x) &&
+            (tile_y >= 0) && (tile_y < world->count_y));
+    u32 tile_map_value = tile_map->tiles[tile_y * world->count_x + tile_x];
+    return tile_map_value;
+}
+
 extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 {
     Game_State* game_state = (Game_State*)memory->permanent_storage;
+
+    u32 tiles_00[TILE_MAP_COUNT_Y][TILE_MAP_COUNT_X] = 
+    {
+        {0, 0, 0, 0,   0, 0, 0, 0,   1,  0, 0, 0, 0,  0, 0, 0, 0},
+        {0, 1, 1, 1,   1, 1, 1, 1,   1,  1, 1, 1, 1,  0, 0, 0, 0},
+        {0, 1, 1, 0,   0, 0, 1, 0,   0,  0, 1, 0, 1,  1, 1, 0, 0},
+        {0, 0, 1, 0,   0, 0, 1, 0,   0,  0, 1, 0, 0,  1, 1, 0, 0},
+        {1, 1, 1, 0,   0, 0, 1, 0,   0,  0, 1, 0, 0,  1, 1, 1, 1},
+        {0, 0, 1, 1,   1, 1, 1, 1,   1,  0, 1, 0, 0,  1, 1, 0, 0},
+        {0, 0, 1, 1,   1, 0, 0, 0,   1,  1, 1, 1, 1,  1, 1, 0, 0},
+        {0, 0, 0, 0,   0, 0, 0, 0,   1,  1, 1, 1, 0,  0, 0, 0, 0},
+        {0, 0, 0, 0,   0, 0, 0, 0,   1,  0, 0, 0, 0,  0, 0, 0, 0},
+    };
+    u32 tiles_01[TILE_MAP_COUNT_Y][TILE_MAP_COUNT_X] = 
+    {
+        {0, 0, 0, 0,   0, 0, 0, 0,   1,  0, 0, 0, 0,  0, 0, 0, 0},
+        {0, 0, 0, 0,   1, 1, 1, 1,   1,  1, 0, 0, 0,  0, 0, 0, 0},
+        {0, 0, 0, 0,   0, 0, 0, 0,   1,  0, 0, 0, 0,  1, 1, 0, 0},
+        {0, 0, 0, 0,   0, 0, 0, 0,   1,  0, 0, 0, 0,  0, 0, 0, 0},
+        {1, 1, 1, 1,   1, 1, 1, 1,   1,  1, 1, 1, 1,  1, 1, 1, 1},
+        {0, 0, 0, 0,   0, 0, 0, 1,   1,  0, 1, 0, 0,  0, 0, 0, 0},
+        {0, 0, 1, 1,   1, 0, 0, 0,   1,  1, 0, 0, 0,  1, 1, 0, 0},
+        {0, 0, 0, 0,   0, 0, 0, 0,   1,  1, 0, 0, 0,  0, 0, 0, 0},
+        {0, 0, 0, 0,   0, 0, 0, 0,   1,  0, 0, 0, 0,  0, 0, 0, 0},
+    };
+
+    u32 tiles_10[TILE_MAP_COUNT_Y][TILE_MAP_COUNT_X] = 
+    {
+        {0, 0, 0, 0,   0, 0, 0, 0,   1,  0, 0, 0, 0,  0, 0, 0, 0},
+        {0, 1, 1, 1,   1, 1, 1, 1,   1,  1, 1, 1, 1,  1, 1, 1, 0},
+        {0, 1, 0, 0,   0, 0, 0, 0,   1,  0, 0, 0, 0,  0, 0, 1, 0},
+        {0, 1, 0, 0,   0, 0, 0, 0,   1,  0, 0, 0, 0,  0, 0, 1, 0},
+        {1, 1, 1, 1,   1, 1, 1, 1,   1,  1, 1, 1, 1,  1, 1, 1, 1},
+        {0, 1, 0, 0,   0, 0, 0, 1,   1,  0, 0, 0, 0,  0, 0, 1, 0},
+        {0, 1, 0, 0,   0, 0, 0, 0,   1,  0, 0, 0, 0,  0, 0, 0, 0},
+        {0, 1, 1, 1,   1, 1, 1, 1,   1,  1, 1, 1, 1,  1, 1, 1, 0},
+        {0, 0, 0, 0,   0, 0, 0, 0,   1,  0, 0, 0, 0,  0, 0, 0, 0},
+    };
+    u32 tiles_11[TILE_MAP_COUNT_Y][TILE_MAP_COUNT_X] = 
+    {
+        {0, 0, 0, 0,   0, 0, 0, 0,   1,  0, 0, 0, 0,  0, 0, 0, 0},
+        {0, 1, 1, 1,   1, 1, 1, 1,   1,  1, 1, 1, 1,  1, 1, 1, 0},
+        {0, 1, 0, 0,   0, 0, 0, 0,   0,  0, 0, 0, 0,  0, 0, 1, 0},
+        {0, 1, 0, 0,   0, 0, 0, 0,   0,  0, 0, 0, 0,  0, 0, 1, 0},
+        {1, 1, 0, 0,   0, 0, 0, 0,   0,  0, 0, 0, 0,  0, 0, 1, 1},
+        {0, 1, 0, 0,   0, 0, 0, 1,   0,  0, 0, 0, 0,  0, 0, 1, 0},
+        {0, 1, 0, 0,   0, 0, 0, 0,   0,  0, 0, 0, 0,  0, 0, 0, 0},
+        {0, 1, 1, 1,   1, 1, 1, 1,   1,  1, 1, 1, 1,  1, 1, 1, 0},
+        {0, 0, 0, 0,   0, 0, 0, 0,   1,  0, 0, 0, 0,  0, 0, 0, 0},
+    };
+    Tile_Map tile_maps[2][2];
+
+    tile_maps[0][0].tiles = (u32*)tiles_00;
+    tile_maps[0][1].tiles = (u32*)tiles_01;
+    tile_maps[1][0].tiles = (u32*)tiles_10;
+    tile_maps[1][1].tiles = (u32*)tiles_11;
+
+    World world;
+    world.tile_map_count_x = 2;
+    world.tile_map_count_y = 2;
+    world.count_x = TILE_MAP_COUNT_X;
+    world.count_y = TILE_MAP_COUNT_Y;
+    world.tile_map = (Tile_Map*)tile_maps;
+
+    Tile_Map* active_tile_map = getTileMap(&world, game_state->player_tile_x, game_state->player_tile_y);
+
+    real32 bottom_left_x = 20;
+    real32 bottom_left_y = 20;
+    real32 tile_width = 70;
+    real32 tile_height = 70;
+
     if(!memory->is_initialized)
     {
         char* filename = __FILE__;
@@ -127,34 +214,12 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             memory->DEBUG_platformFreeFileMemory(thread, file.contents);
         }
         */
-       
-        game_state->tone_hz = 512;
-        game_state->t_sine = 0.0f;
-
-        game_state->player_x = 50;
-        game_state->player_y = 50;
+        game_state->player_x = 150;
+        game_state->player_y = 150;
 
         // TODO(casey): This may be more appropriate to do in the platform layer
         memory->is_initialized = true;
     }
-
-    u32 tile_map[TILE_MAP_COUNT_Y][TILE_MAP_COUNT_X] = 
-    {
-        {1, 1, 1, 0,   0, 0, 0, 0,   0, 0, 0, 0,  0, 0, 0, 0},
-        {1, 1, 1, 1,   1, 1, 1, 1,   1, 1, 1, 1,  1, 0, 0, 0},
-        {1, 1, 1, 0,   0, 0, 1, 0,   0, 0, 1, 0,  1, 1, 1, 0},
-        {0, 0, 1, 0,   0, 0, 1, 0,   0, 0, 1, 0,  0, 1, 1, 0},
-        {0, 1, 1, 0,   0, 0, 1, 0,   0, 0, 1, 0,  0, 1, 0, 0},
-        {0, 0, 1, 1,   1, 1, 1, 1,   1, 0, 1, 0,  0, 1, 1, 0},
-        {0, 0, 1, 1,   1, 0, 0, 0,   1, 1, 1, 1,  1, 1, 1, 0},
-        {0, 0, 0, 0,   0, 0, 0, 0,   0, 1, 1, 1,  0, 0,- 0, 0},
-        {0, 0, 0, 0,   0, 0, 0, 0,   0, 0, 0, 0,  0, 0, 0, 0},
-    };
-
-    real32 upper_left_x = 40;
-    real32 upper_left_y = 40;
-    real32 tile_width = 75;
-    real32 tile_height = 75;
     
     //drawRectangle(buffer, 0.0f, 0.0f, (real32)buffer->width, (real32)buffer->height, 1.0f, 0.0f, 1.0f );
     //renderWeirdGradient(buffer, game_state->blue_offset, game_state->green_offset);
@@ -186,10 +251,12 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         // Input.AButtonHalfTransitionCount;
         float move_scale = 200.0f;
 
-        int new_player_x = game_state->player_x + roundReal32ToInt32(move_scale * input->dt_for_frame * (controller->left_stick_average_x));
-        int new_player_y = game_state->player_y + roundReal32ToInt32(move_scale * input->dt_for_frame * (controller->left_stick_average_y));
-        int player_tile_x = truncateReal32ToInt32((new_player_x - upper_left_x) / tile_width);
-        int player_tile_y = truncateReal32ToInt32((new_player_y - upper_left_y) / tile_height);
+        int new_player_x = game_state->player_x + 
+            roundReal32ToInt32(move_scale * input->dt_for_frame * (controller->left_stick_average_x));
+        int new_player_y = game_state->player_y + 
+            roundReal32ToInt32(move_scale * input->dt_for_frame * (controller->left_stick_average_y));
+        int player_tile_x = truncateReal32ToInt32((new_player_x - bottom_left_x) / tile_width);
+        int player_tile_y = truncateReal32ToInt32((new_player_y - bottom_left_y) / tile_height);
 
         bool32 is_valid = false;
         if ((player_tile_x >= 0) && (player_tile_x < TILE_MAP_COUNT_X) &&
@@ -223,6 +290,10 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         }
         game_state->t_jump -= 0.033f;
     }
+
+    drawRectangle(buffer, 0.0f, 0.0f, (real32)buffer->width, (real32)buffer->height,
+                  1.0f, 0.0f, 0.1f);
+
     for (int row = 0; row < 9; ++row) {
         for (int col = 0; col < 16; ++col) {
             u32 tile_id = tile_map[row][col];
@@ -230,16 +301,18 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             if(tile_id == 1) {
                 gray = 1.0f;
             }
-            real32 min_x = upper_left_x + ((real32)col) * tile_width;
-            real32 min_y = upper_left_y + ((real32)row) * tile_height;
+            real32 min_x = bottom_left_x + ((real32)col) * tile_width;
+            real32 min_y = bottom_left_y + ((real32)row) * tile_height;
             real32 max_x = min_x + tile_width;
             real32 max_y = min_y + tile_height;
             drawRectangle(buffer, min_x, min_y, max_x, max_y, gray, gray, gray);
         }
     }
+
     renderPlayer(buffer, game_state->player_x, game_state->player_y);
 
     //RenderPlayer(buffer, input->mouse_x, input->mouse_y);
+    drawRectangle(buffer, 0, 0, 40, 40, 0.0f, 1.0f, 0.0f);
 
     for(int button_index = 0;
         button_index < ArrayCount(input->mouse_buttons);
