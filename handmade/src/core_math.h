@@ -14,3 +14,8 @@ inline i32 truncateReal32ToInt32(real32 r32) {
     i32 result = (i32)r32;
     return result;
 }
+
+inline i32 floorReal32ToInt32(real32 r32) {
+    i32 result = (i32)floorf(r32);
+    return result;
+}

@@ -190,11 +190,15 @@ struct Tile_Map {
 struct World {
     real32 tile_side_in_meters;
     real32 tile_side_in_pixels;
+
     i32 count_x;
     i32 count_y;
 
     real32 upper_left_x;
     real32 upper_left_y;
+
+    real32 lower_left_x;
+    real32 lower_left_y;
 
     i32 tile_map_count_x;
     i32 tile_map_count_y;
@@ -204,7 +208,23 @@ struct World {
 
 
 struct Canonical_Position {
-    
+    i32 tile_map_x;
+    i32 tile_map_y;
+
+    i32 tile_x;
+    i32 tile_y;
+
+    i32 tile_rel_x;
+    i32 tile_rel_y;
+};
+
+struct Raw_Position {
+    i32 tile_map_x;
+    i32 tile_map_y;
+
+    //raw pixel locaiton
+    real32 x;
+    real32 y;
 };
 
 struct Tile_Map_Position {
@@ -226,8 +246,12 @@ struct Game_State {
     i32 player_tile_x;
     i32 player_tile_y;
 
+    i32 player_tile_map_x;
+    i32 player_tile_map_y;
+
     int player_x;
     int player_y;
+    int player_side_length;
     real32 t_jump;
 
 
