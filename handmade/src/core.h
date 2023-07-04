@@ -216,17 +216,8 @@ struct Canonical_Position {
     i32 tile_x;
     i32 tile_y;
 
-    i32 tile_rel_x;
-    i32 tile_rel_y;
-};
-
-struct Raw_Position {
-    i32 tile_map_x;
-    i32 tile_map_y;
-
-    //raw pixel locaiton
-    real32 x;
-    real32 y;
+    real32 tile_rel_x;
+    real32 tile_rel_y;
 };
 
 struct Tile_Map_Position {
@@ -245,17 +236,19 @@ struct Tile_Map_Position {
 struct Game_State {
     World* world;
 
-    i32 player_tile_x;
-    i32 player_tile_y;
+    Canonical_Position player_pos;
+    //i32 player_tile_x;
+    //i32 player_tile_y;
 
-    i32 player_tile_map_x;
-    i32 player_tile_map_y;
+    //i32 player_tile_map_x;
+    //i32 player_tile_map_y;
 
-    int player_x;
-    int player_y;
-    int player_side_length;
+    //int player_x;
+    //int player_y;
+    int player_side_length_pixels;
+    real32 player_side_length;
     int player_speed_scaler;
-    int player_speed_pixel_max_per_frame;
+    int player_max_distance_per_frame;
     real32 t_jump;
 
 

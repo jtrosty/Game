@@ -36,3 +36,29 @@ inline i32 clampAbsValueInt32(i32 value, i32 high_spec) {
     }
     return value;
 }
+
+inline real32 clampAbsValueReal32(real32 value, real32 high_spec) {
+    if (value > high_spec) {
+        value = high_spec;
+    } 
+    else if (value < -high_spec) {
+        value = -high_spec;
+    }
+    return value;
+}
+// Math files
+
+inline real32 core_sin(real32 angle) {
+    real32 result = sinf(angle);
+    return result;
+}
+
+inline real32 core_cos(real32 angle) {
+    real32 result = sinf(angle);
+    return result;
+}
+
+inline real32 core_atan2(real32 y, real32 x) {
+    real32 result = atan2f(y, x);
+    return result;
+}

@@ -157,7 +157,41 @@ inline bool32 isTileMapPointEmpty(World* world, Tile_Map* tile_map, i32 test_til
     return result;
 }
 
-inline Canonical_Position getCanonicalPosition(World* world, Raw_Position* pos) {
+inline void recanonicalizeCoordinate(World* world, i32 tile_map_count, i32 tile_count, i32* tile_map, i32* tile, real32* tile_rel) {
+    i32 offset = floorReal32ToInt32(*tile_rel / world->tile_side_in_meters); // this will be 1 or -1
+    *tile += offset;
+    *tile_rel -= offset * world->tile_side_in_meters;
+
+    Assert(*tile_rel >= 0);
+    Assert(*tile_rel <= world->tile_side_in_meters);
+
+    if (*tile < 0) {
+        *tile = tile_count + *tile;
+        *tile_map -= 1;
+        if (*tile_map < 0) {
+            *tile_map += world->tile_map_count_x;
+        }
+    }
+    if (*tile >= tile_count) {
+        *tile = tile_count - *tile;
+        *tile_map += 1;
+        if (*tile_map >= tile_map_count) {
+            *tile_map -= tile_map_count;
+        }
+    }
+}
+
+inline Canonical_Position recanonicalizePosition(World* world, Canonical_Position pos) {
+    Canonical_Position result = pos;
+
+    recanonicalizeCoordinate(world, world->tile_map_count_x, world->count_x, &result.tile_map_x, &result.tile_x, &result.tile_rel_x);
+    recanonicalizeCoordinate(world, world->tile_map_count_y, world->count_y, &result.tile_map_y, &result.tile_y, &result.tile_rel_y);
+
+    return result;
+}
+
+/*
+inline Canonical_Position getCanonicalPosition(World* world, Canonical_Position* pos) {
     Canonical_Position result;
 
     result.tile_map_x = pos->tile_map_x;
@@ -206,18 +240,12 @@ inline Canonical_Position getCanonicalPosition(World* world, Raw_Position* pos) 
     }
     return result;
 }
+*/
 
-static bool32 isWorldPointEmpty(World* world, Raw_Position* test_pos) {
+static bool32 isWorldPointEmpty(World* world, Canonical_Position* test_pos) {
     bool32 empty = false;
-    Canonical_Position can_pos = getCanonicalPosition(world, test_pos);
-    Tile_Map* tile_map = getTileMap(world, can_pos.tile_map_x, can_pos.tile_map_y);
-    empty = isTileMapPointEmpty(world, tile_map, can_pos.tile_x, can_pos.tile_y);
-    if (empty) {
-        test_pos->tile_map_x = can_pos.tile_map_x;
-        test_pos->tile_map_y = can_pos.tile_map_y;
-        test_pos->x = world->lower_left_x + ((can_pos.tile_x) * world->tile_side_in_pixels) + can_pos.tile_rel_x;
-        test_pos->y = world->lower_left_y + ((can_pos.tile_y) * world->tile_side_in_pixels) + can_pos.tile_rel_y;
-    }
+    Tile_Map* tile_map = getTileMap(world, test_pos->tile_map_x, test_pos->tile_map_y);
+    empty = isTileMapPointEmpty(world, tile_map, test_pos->tile_x, test_pos->tile_y);
     return empty;
 }
 
@@ -270,7 +298,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         {0, 1, 0, 0,   0, 0, 0, 0,   0,  0, 0, 0, 0,  0, 0, 1, 0},
         {1, 1, 0, 0,   0, 0, 0, 0,   0,  0, 0, 0, 0,  0, 0, 1, 1},
         {0, 1, 0, 0,   0, 0, 0, 1,   0,  0, 0, 0, 0,  0, 0, 1, 0},
-        {0, 1, 0, 0,   0, 0, 0, 0,   0,  0, 0, 0, 0,  0, 0, 0, 0},
+        {0, 1, 0, 0,   0, 0, 0, 0,   0,  0, 0, 0, 0,  0, 0, 1, 0},
         {0, 1, 1, 1,   1, 1, 1, 1,   1,  1, 1, 1, 1,  1, 1, 1, 0},
         {0, 0, 0, 0,   0, 0, 0, 0,   1,  0, 0, 0, 0,  0, 0, 0, 0},
     };
@@ -287,12 +315,13 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     world.count_x = TILE_MAP_COUNT_X;
     world.count_y = TILE_MAP_COUNT_Y;
     world.tile_map = (Tile_Map*)tile_maps;
-    world.tile_side_in_meters = 1.4f;
+
+    world.tile_side_in_meters = 1.0f;
     world.tile_side_in_pixels = 70;
+
     world.lower_left_x = 20;
     world.lower_left_y = 20;
 
-    Tile_Map* active_tile_map = getTileMap(&world, game_state->player_tile_map_x, game_state->player_tile_map_y);
 
     if(!memory->is_initialized)
     {
@@ -306,18 +335,24 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             memory->DEBUG_platformFreeFileMemory(thread, file.contents);
         }
         */
-        game_state->player_x = 150;
-        game_state->player_y = 150;
-        game_state->player_tile_map_x = 0;
-        game_state->player_tile_map_y = 0;
-        game_state->player_side_length = 10;
+        game_state->player_pos.tile_map_x = 0;
+        game_state->player_pos.tile_map_y = 0;
+        game_state->player_pos.tile_rel_x = 0.5f;
+        game_state->player_pos.tile_rel_y = 0.5f;
+        game_state->player_pos.tile_x = 1;
+        game_state->player_pos.tile_y = 1;
+
+        game_state->player_side_length = world.tile_side_in_meters / 6.0f;
+        game_state->player_side_length_pixels = world.tile_side_in_pixels * (game_state->player_side_length / world.tile_side_in_meters);
         game_state->tone_hz = 512;
-        game_state->player_speed_scaler = 300.0f;
-        game_state->player_speed_pixel_max_per_frame = 30;
+        game_state->player_speed_scaler = 10.0f;
+        game_state->player_max_distance_per_frame = 1.0f;
 
         // TODO(casey): This may be more appropriate to do in the platform layer
         memory->is_initialized = true;
     }
+
+    Tile_Map* active_tile_map = getTileMap(&world, game_state->player_pos.tile_map_x, game_state->player_pos.tile_map_y);
     
     //drawRectangle(buffer, 0.0f, 0.0f, (real32)buffer->width, (real32)buffer->height, 1.0f, 0.0f, 1.0f );
     //renderWeirdGradient(buffer, game_state->blue_offset, game_state->green_offset);
@@ -348,49 +383,25 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         // Input.AButtonEndedDown;
         // Input.AButtonHalfTransitionCount;
 
-        int player_x_diff = roundReal32ToInt32(game_state->player_speed_scaler * 
-                                               input->dt_for_frame * 
-                                               (controller->left_stick_average_x));
-        player_x_diff = clampAbsValueInt32(player_x_diff, game_state->player_speed_pixel_max_per_frame);
-        int new_player_x = game_state->player_x + player_x_diff;
+        Canonical_Position new_player_pos =  game_state->player_pos;
+        real32 player_x_diff = game_state->player_speed_scaler * input->dt_for_frame * controller->left_stick_average_x;
+        real32 player_y_diff = game_state->player_speed_scaler * input->dt_for_frame * controller->left_stick_average_y;
 
-        int player_y_diff = roundReal32ToInt32(game_state->player_speed_scaler * 
-                                               input->dt_for_frame * 
-                                               (controller->left_stick_average_y));
-        player_y_diff = clampAbsValueInt32(player_y_diff, game_state->player_speed_pixel_max_per_frame);
-        int new_player_y = game_state->player_y + player_y_diff;
+        new_player_pos.tile_rel_x += clampAbsValueReal32(player_x_diff, game_state->player_max_distance_per_frame);
+        new_player_pos.tile_rel_y += clampAbsValueReal32(player_y_diff, game_state->player_max_distance_per_frame);
 
-
-        int player_tile_x = truncateReal32ToInt32((new_player_x - world.lower_left_x) / world.tile_side_in_pixels);
-        int player_tile_y = truncateReal32ToInt32((new_player_y - world.lower_left_y) / world.tile_side_in_pixels);
-
-        Raw_Position new_player_pos =  {0};
-        new_player_pos.tile_map_x = game_state->player_tile_map_x;
-        new_player_pos.tile_map_y = game_state->player_tile_map_y;
-        new_player_pos.x = new_player_x;
-        new_player_pos.y = new_player_y;
-
-        if (new_player_x < world.lower_left_x || new_player_y < world.lower_left_y) {
-            isWorldPointEmpty(&world, &new_player_pos);
-        } 
+        new_player_pos = recanonicalizePosition(&world, new_player_pos);
 
         //bool32 test = isWorldPointEmpty(&world, new_player_pos);
+        bool32 update_pos = isWorldPointEmpty(&world, &new_player_pos);
+        if(!update_pos){
+            if (isWorldPointEmpty(&world, &new_player_pos)) {
+                game_state->player_pos = new_player_pos;
+            }
+        }
         if (isWorldPointEmpty(&world, &new_player_pos)) {
-            game_state->player_x = new_player_pos.x;
-            game_state->player_y = new_player_pos.y;
-            game_state->player_tile_map_x = new_player_pos.tile_map_x;
-            game_state->player_tile_map_y = new_player_pos.tile_map_y;
+            game_state->player_pos = new_player_pos;
         }
-
-        if(game_state->t_jump > 0)
-        {
-            game_state->player_y += (int)(5.0f*sinf(0.5f*Pi32*game_state->t_jump));
-        }
-        if(controller->action_down.ended_down)
-        {
-            game_state->t_jump = 4.0;
-        }
-        game_state->t_jump -= 0.033f;
     }
 
     drawRectangle(buffer, 0.0f, 0.0f, (real32)buffer->width, (real32)buffer->height,
@@ -415,7 +426,16 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         }
     }
 
-    renderPlayer(buffer, game_state->player_x, game_state->player_y, game_state->player_side_length);
+    // Turn player pos into a pixel locaiton on the screen.
+    int player_x_pixel = world.lower_left_x + 
+                        (world.tile_side_in_pixels * game_state->player_pos.tile_x) + 
+                        floorReal32ToInt32(game_state->player_pos.tile_rel_x * 
+                                          ((real32)world.tile_side_in_pixels / world.tile_side_in_meters)); 
+    int player_y_pixel = world.lower_left_y + 
+                        (world.tile_side_in_pixels * game_state->player_pos.tile_y) + 
+                        floorReal32ToInt32(game_state->player_pos.tile_rel_y * 
+                                          ((real32)world.tile_side_in_pixels / world.tile_side_in_meters)); 
+    renderPlayer(buffer, player_x_pixel, player_y_pixel, game_state->player_side_length_pixels);
 
     //RenderPlayer(buffer, input->mouse_x, input->mouse_y);
     drawRectangle(buffer, 0, 0, 40, 40, 0.0f, 1.0f, 0.0f);
