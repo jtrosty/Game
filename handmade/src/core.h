@@ -203,6 +203,8 @@ struct World {
     i32 tile_map_count_x;
     i32 tile_map_count_y;
 
+    Tile_Map* active_tile_map;
+
     Tile_Map* tile_map;
 };
 
@@ -252,6 +254,8 @@ struct Game_State {
     int player_x;
     int player_y;
     int player_side_length;
+    int player_speed_scaler;
+    int player_speed_pixel_max_per_frame;
     real32 t_jump;
 
 

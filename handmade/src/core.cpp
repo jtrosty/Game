@@ -117,7 +117,22 @@ inline Tile_Map* getTileMap(World* world, i32 tile_map_x, i32 tile_map_y) {
     Tile_Map* tile_map = 0;
     if ((tile_map_x >= 0) && (tile_map_x < world->tile_map_count_x) &&
         (tile_map_y >= 0) && (tile_map_y < world->tile_map_count_y)) {
-            tile_map = &world->tile_map[tile_map_y * world->tile_map_count_x + tile_map_y];
+            tile_map = &world->tile_map[tile_map_y * world->tile_map_count_x + tile_map_x];
+    }
+    else {
+        if (tile_map_x < 0) {
+            tile_map_x = world->tile_map_count_x + tile_map_x;
+        }
+        else if (tile_map_x > world->tile_map_count_x) {
+
+        }
+        if (tile_map_y < 0) {
+
+        }
+        else if (tile_map_y > world->tile_map_count_y) {
+
+        }
+        tile_map = &world->tile_map[tile_map_y * world->tile_map_count_x + tile_map_x];
     }
     return tile_map;
 }
@@ -131,6 +146,7 @@ inline u32 getTileValueUnchecked(World* world, Tile_Map* tile_map, i32 tile_x, i
 
 inline bool32 isTileMapPointEmpty(World* world, Tile_Map* tile_map, i32 test_tile_x, i32 test_tile_y) {
     bool32 result = false;
+    // This funciton is guarded by checking if tile_map is zero or not.
     if (tile_map) {
         if ((test_tile_x >= 0) && (test_tile_x < world->count_x) &&
             (test_tile_y >= 0) && (test_tile_y < world->count_y)) {
@@ -141,14 +157,14 @@ inline bool32 isTileMapPointEmpty(World* world, Tile_Map* tile_map, i32 test_til
     return result;
 }
 
-inline Canonical_Position getCanonicalPosition(World* world, Raw_Position pos) {
+inline Canonical_Position getCanonicalPosition(World* world, Raw_Position* pos) {
     Canonical_Position result;
 
-    result.tile_map_x = pos.tile_map_x;
-    result.tile_map_y = pos.tile_map_y;
+    result.tile_map_x = pos->tile_map_x;
+    result.tile_map_y = pos->tile_map_y;
 
-    real32 x = pos.x + world->lower_left_x;
-    real32 y = pos.y + world->lower_left_y;
+    real32 x = pos->x - world->lower_left_x;
+    real32 y = pos->y - world->lower_left_y;
     result.tile_x = floorReal32ToInt32(x / world->tile_side_in_pixels);
     result.tile_y = floorReal32ToInt32(y / world->tile_side_in_pixels);
 
@@ -163,27 +179,45 @@ inline Canonical_Position getCanonicalPosition(World* world, Raw_Position pos) {
     if (result.tile_x < 0) {
         result.tile_x = world->count_x + result.tile_x;
         result.tile_map_x--;
+        if (result.tile_map_x < 0) {
+            result.tile_map_x += world->tile_map_count_x;
+        }
     }
     if (result.tile_y < 0) {
         result.tile_y = world->count_y + result.tile_y;
         result.tile_map_y--;
+        if (result.tile_map_y < 0) {
+            result.tile_map_y += world->tile_map_count_y;
+        }
     }
     if (result.tile_x >= world->count_x) {
         result.tile_x = world->count_x - result.tile_x;
         result.tile_map_x++;
+        if (result.tile_map_x >= world->tile_map_count_x) {
+            result.tile_map_x -= world->tile_map_count_x;
+        }
     }
     if (result.tile_y >= world->count_y) {
         result.tile_y = world->count_y - result.tile_y;
         result.tile_map_y++;
+        if (result.tile_map_y >= world->tile_map_count_y) {
+            result.tile_map_y -= world->tile_map_count_y;
+        }
     }
     return result;
 }
 
-static bool32 isWorldPointEmpty(World* world, Raw_Position test_pos) {
+static bool32 isWorldPointEmpty(World* world, Raw_Position* test_pos) {
     bool32 empty = false;
     Canonical_Position can_pos = getCanonicalPosition(world, test_pos);
     Tile_Map* tile_map = getTileMap(world, can_pos.tile_map_x, can_pos.tile_map_y);
     empty = isTileMapPointEmpty(world, tile_map, can_pos.tile_x, can_pos.tile_y);
+    if (empty) {
+        test_pos->tile_map_x = can_pos.tile_map_x;
+        test_pos->tile_map_y = can_pos.tile_map_y;
+        test_pos->x = world->lower_left_x + ((can_pos.tile_x) * world->tile_side_in_pixels) + can_pos.tile_rel_x;
+        test_pos->y = world->lower_left_y + ((can_pos.tile_y) * world->tile_side_in_pixels) + can_pos.tile_rel_y;
+    }
     return empty;
 }
 
@@ -278,6 +312,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         game_state->player_tile_map_y = 0;
         game_state->player_side_length = 10;
         game_state->tone_hz = 512;
+        game_state->player_speed_scaler = 300.0f;
+        game_state->player_speed_pixel_max_per_frame = 30;
 
         // TODO(casey): This may be more appropriate to do in the platform layer
         memory->is_initialized = true;
@@ -311,12 +347,20 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
         // Input.AButtonEndedDown;
         // Input.AButtonHalfTransitionCount;
-        float move_scale = 200.0f;
 
-        int new_player_x = game_state->player_x + 
-            roundReal32ToInt32(move_scale * input->dt_for_frame * (controller->left_stick_average_x));
-        int new_player_y = game_state->player_y + 
-            roundReal32ToInt32(move_scale * input->dt_for_frame * (controller->left_stick_average_y));
+        int player_x_diff = roundReal32ToInt32(game_state->player_speed_scaler * 
+                                               input->dt_for_frame * 
+                                               (controller->left_stick_average_x));
+        player_x_diff = clampAbsValueInt32(player_x_diff, game_state->player_speed_pixel_max_per_frame);
+        int new_player_x = game_state->player_x + player_x_diff;
+
+        int player_y_diff = roundReal32ToInt32(game_state->player_speed_scaler * 
+                                               input->dt_for_frame * 
+                                               (controller->left_stick_average_y));
+        player_y_diff = clampAbsValueInt32(player_y_diff, game_state->player_speed_pixel_max_per_frame);
+        int new_player_y = game_state->player_y + player_y_diff;
+
+
         int player_tile_x = truncateReal32ToInt32((new_player_x - world.lower_left_x) / world.tile_side_in_pixels);
         int player_tile_y = truncateReal32ToInt32((new_player_y - world.lower_left_y) / world.tile_side_in_pixels);
 
@@ -326,36 +370,17 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         new_player_pos.x = new_player_x;
         new_player_pos.y = new_player_y;
 
-        //bool32 test = isWorldPointEmpty(&world, new_player_pos);
-        if (isWorldPointEmpty(&world, new_player_pos)) {
-            game_state->player_x = new_player_x;
-            game_state->player_y = new_player_y;
-            game_state->player_tile_x = player_tile_x;
-            game_state->player_tile_y = player_tile_y;
-        }
-/*
-        bool32 is_valid = false;
-        if ((player_tile_x >= 0) && (player_tile_x < TILE_MAP_COUNT_X) &&
-            (player_tile_y >= 0) && (player_tile_y < TILE_MAP_COUNT_Y)) {
-                u32 tile_map_value = active_tile_map->tiles[(player_tile_y * TILE_MAP_COUNT_X) + player_tile_x];
-                is_valid = (tile_map_value == 1);
-                if (tile_map_value == 1) {
-                    is_valid = 1;
-                }
-                else {
-                    is_valid = 0;
-                }
-        }
-        if (is_valid) {
-            game_state->player_x = new_player_x;
-            game_state->player_y = new_player_y;
-            game_state->player_tile_x = player_tile_x;
-            game_state->player_tile_y = player_tile_y;
-        }
-        */
+        if (new_player_x < world.lower_left_x || new_player_y < world.lower_left_y) {
+            isWorldPointEmpty(&world, &new_player_pos);
+        } 
 
-        //game_state->player_x += truncateReal32ToInt32(move_scale * (input->dt_for_frame) * (controller->left_stick_average_x));
-        //game_state->player_y += truncateReal32ToInt32(move_scale * (input->dt_for_frame) * (controller->left_stick_average_y));
+        //bool32 test = isWorldPointEmpty(&world, new_player_pos);
+        if (isWorldPointEmpty(&world, &new_player_pos)) {
+            game_state->player_x = new_player_pos.x;
+            game_state->player_y = new_player_pos.y;
+            game_state->player_tile_map_x = new_player_pos.tile_map_x;
+            game_state->player_tile_map_y = new_player_pos.tile_map_y;
+        }
 
         if(game_state->t_jump > 0)
         {
@@ -369,20 +394,24 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     }
 
     drawRectangle(buffer, 0.0f, 0.0f, (real32)buffer->width, (real32)buffer->height,
-                  1.0f, 0.0f, 0.1f);
+                  1.0f, 0.0f, 0.0f);
 
-    for (int row = 0; row < 9; ++row) {
-        for (int col = 0; col < 16; ++col) {
+    int test_gradient = 0;
+    for (int row = 0; row < world.count_y; ++row) {
+        for (int col = 0; col < world.count_x; ++col) {
             u32 tile_id = getTileValueUnchecked(&world, active_tile_map, col, row);
             real32 gray = 0.4f;
             if(tile_id == 1) {
                 gray = 1.0f;
             }
+            gray *= ((real32)(test_gradient) / (real32)(world.count_x * world.count_y));
             real32 min_x = world.lower_left_x + ((real32)col) * world.tile_side_in_pixels;
             real32 min_y = world.lower_left_y + ((real32)row) * world.tile_side_in_pixels;
             real32 max_x = min_x + world.tile_side_in_pixels;
             real32 max_y = min_y + world.tile_side_in_pixels;
             drawRectangle(buffer, min_x, min_y, max_x, max_y, gray, gray, gray);
+
+            test_gradient++;
         }
     }
 
@@ -407,3 +436,26 @@ extern "C" GAME_GET_SOUND_SAMPLES(GameGetSoundSamples)
     Game_State* game_state = (Game_State*)memory->permanent_storage;
     gameOutputSound(game_state, sound_buffer, game_state->tone_hz);
 }
+
+/* bool32 is_valid = false;
+        if ((player_tile_x >= 0) && (player_tile_x < TILE_MAP_COUNT_X) &&
+            (player_tile_y >= 0) && (player_tile_y < TILE_MAP_COUNT_Y)) {
+                u32 tile_map_value = active_tile_map->tiles[(player_tile_y * TILE_MAP_COUNT_X) + player_tile_x];
+                is_valid = (tile_map_value == 1);
+                if (tile_map_value == 1) {
+                    is_valid = 1;
+                }
+                else {
+                    is_valid = 0;
+                }
+        }
+        if (is_valid) {
+            game_state->player_x = new_player_x;
+            game_state->player_y = new_player_y;
+            game_state->player_tile_x = player_tile_x;
+            game_state->player_tile_y = player_tile_y;
+        }
+*/
+
+        //game_state->player_x += truncateReal32ToInt32(move_scale * (input->dt_for_frame) * (controller->left_stick_average_x));
+        //game_state->player_y += truncateReal32ToInt32(move_scale * (input->dt_for_frame) * (controller->left_stick_average_y));
