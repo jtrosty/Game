@@ -181,8 +181,8 @@ inline void recanonicalizeCoordinate(World* world, i32 tile_map_count, i32 tile_
     }
 }
 
-inline Canonical_Position recanonicalizePosition(World* world, Canonical_Position pos) {
-    Canonical_Position result = pos;
+inline World_Position recanonicalizePosition(World* world, World_Position pos) {
+    World_Position result = pos;
 
     recanonicalizeCoordinate(world, world->tile_map_count_x, world->count_x, &result.tile_map_x, &result.tile_x, &result.tile_rel_x);
     recanonicalizeCoordinate(world, world->tile_map_count_y, world->count_y, &result.tile_map_y, &result.tile_y, &result.tile_rel_y);
@@ -191,8 +191,8 @@ inline Canonical_Position recanonicalizePosition(World* world, Canonical_Positio
 }
 
 /*
-inline Canonical_Position getCanonicalPosition(World* world, Canonical_Position* pos) {
-    Canonical_Position result;
+inline World_Position getCanonicalPosition(World* world, Canonical_Position* pos) {
+    World_Position result;
 
     result.tile_map_x = pos->tile_map_x;
     result.tile_map_y = pos->tile_map_y;
@@ -242,7 +242,7 @@ inline Canonical_Position getCanonicalPosition(World* world, Canonical_Position*
 }
 */
 
-static bool32 isWorldPointEmpty(World* world, Canonical_Position* test_pos) {
+static bool32 isWorldPointEmpty(World* world, World_Position* test_pos) {
     bool32 empty = false;
     Tile_Map* tile_map = getTileMap(world, test_pos->tile_map_x, test_pos->tile_map_y);
     empty = isTileMapPointEmpty(world, tile_map, test_pos->tile_x, test_pos->tile_y);
@@ -383,7 +383,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         // Input.AButtonEndedDown;
         // Input.AButtonHalfTransitionCount;
 
-        Canonical_Position new_player_pos =  game_state->player_pos;
+        World_Position new_player_pos =  game_state->player_pos;
         real32 player_x_diff = game_state->player_speed_scaler * input->dt_for_frame * controller->left_stick_average_x;
         real32 player_y_diff = game_state->player_speed_scaler * input->dt_for_frame * controller->left_stick_average_y;
 
@@ -408,18 +408,19 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                   1.0f, 0.0f, 0.0f);
 
     int test_gradient = 0;
-    for (int row = 0; row < world.count_y; ++row) {
-        for (int col = 0; col < world.count_x; ++col) {
+    for (int row = 0; row <= world.count_y; ++row) {
+        for (int col = 0; col <= world.count_x; ++col) {
             u32 tile_id = getTileValueUnchecked(&world, active_tile_map, col, row);
             real32 gray = 0.4f;
             if(tile_id == 1) {
                 gray = 1.0f;
             }
             gray *= ((real32)(test_gradient) / (real32)(world.count_x * world.count_y));
-            real32 min_x = world.lower_left_x + ((real32)col) * world.tile_side_in_pixels;
-            real32 min_y = world.lower_left_y + ((real32)row) * world.tile_side_in_pixels;
+            real32 min_x = world.lower_left_x + ((real32)(col) * world.tile_side_in_pixels);
             real32 max_x = min_x + world.tile_side_in_pixels;
-            real32 max_y = min_y + world.tile_side_in_pixels;
+
+            real32 max_y = world.lower_left_y + ((real32)(world.count_y - row) * world.tile_side_in_pixels);
+            real32 min_y = max_y - world.tile_side_in_pixels;
             drawRectangle(buffer, min_x, min_y, max_x, max_y, gray, gray, gray);
 
             test_gradient++;

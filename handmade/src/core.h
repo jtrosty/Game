@@ -194,9 +194,6 @@ struct World {
     i32 count_x;
     i32 count_y;
 
-    real32 upper_left_x;
-    real32 upper_left_y;
-
     real32 lower_left_x;
     real32 lower_left_y;
 
@@ -209,7 +206,7 @@ struct World {
 };
 
 
-struct Canonical_Position {
+struct World_Position {
     i32 tile_map_x;
     i32 tile_map_y;
 
@@ -236,7 +233,7 @@ struct Tile_Map_Position {
 struct Game_State {
     World* world;
 
-    Canonical_Position player_pos;
+    World_Position player_pos;
     //i32 player_tile_x;
     //i32 player_tile_y;
 
