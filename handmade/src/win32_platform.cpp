@@ -400,7 +400,8 @@ DEBUG_PLATFORM_READ_ENTIRE_FILE(debug_platformReadEntireFile) {
             result.contents = VirtualAlloc(0, file_size_32, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
             if(result.contents) {
                 DWORD bytes_read;
-                if(ReadFile(file_handle, result.contents, file_size_32, &bytes_read, 0) && file_size_32 == bytes_read) {
+                if(ReadFile(file_handle, result.contents, file_size_32, &bytes_read, 0) && 
+                (file_size_32 == bytes_read)) {
                     result.contents_size = file_size_32;
                 }
                 else {
@@ -415,7 +416,6 @@ DEBUG_PLATFORM_READ_ENTIRE_FILE(debug_platformReadEntireFile) {
         else {
             // TODO: Logging
         }
-
         CloseHandle(file_handle);
     }
     else {

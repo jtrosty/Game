@@ -27,7 +27,8 @@ typedef uint32_t bool32;
 typedef float real32;
 typedef double real64;
 
-#include "core_math.h"
+typedef size_t memory_index;
+
 
 #if HANDMADE_SLOW
 // TODO(casey): Complete assertion macro - don't worry everyone!
@@ -53,11 +54,15 @@ struct Thread_Context
    These are NOT for doing anything in the shipping game - they are
    blocking and the write doesn't protect against lost data!
 */
-struct Debug_Read_File_Result
+
+#include "core_math.h"
+#include "core_tilemap.h"
+
+typedef struct Debug_Read_File_Result
 {
     uint32 contents_size;
     void* contents;
-};
+} Debug_Read_File_Result;
 
 #define DEBUG_PLATFORM_FREE_FILE_MEMORY(name) void name(Thread_Context* thread, void* memory)
 typedef DEBUG_PLATFORM_FREE_FILE_MEMORY(debug_platform_free_file_memory);
@@ -158,10 +163,10 @@ struct Game_Memory
 {
     bool32 is_initialized;
 
-    uint64 permanent_storage_size;
+    u64 permanent_storage_size;
     void* permanent_storage; // NOTE(casey): REQUIRED to be cleared to zero at startup
 
-    uint64 transient_storage_size;
+    u64 transient_storage_size;
     void* transient_storage; // NOTE(casey): REQUIRED to be cleared to zero at startup
 
     debug_platform_free_file_memory* DEBUG_platformFreeFileMemory;
@@ -179,61 +184,23 @@ typedef GAME_UPDATE_AND_RENDER(game_update_and_render);
 #define GAME_GET_SOUND_SAMPLES(name) void name(Thread_Context* thread, Game_Memory* memory, Game_Sound_Output_Buffer* sound_buffer)
 typedef GAME_GET_SOUND_SAMPLES(game_get_sound_samples);
 
-//
-//
-//
 
-struct Tile_Map {
-    u32* tiles;
+struct Memory_Arena {
+    memory_index size;
+    u8* base;
+    memory_index used;
 };
+
 
 struct World {
-    real32 tile_side_in_meters;
-    real32 tile_side_in_pixels;
-
-    i32 count_x;
-    i32 count_y;
-
-    real32 lower_left_x;
-    real32 lower_left_y;
-
-    i32 tile_map_count_x;
-    i32 tile_map_count_y;
-
-    Tile_Map* active_tile_map;
-
     Tile_Map* tile_map;
-};
-
-
-struct World_Position {
-    i32 tile_map_x;
-    i32 tile_map_y;
-
-    i32 tile_x;
-    i32 tile_y;
-
-    real32 tile_rel_x;
-    real32 tile_rel_y;
-};
-
-struct Tile_Map_Position {
-    // NOTE: These are fixed point tile locations. The hibh bits
-    // are the tile chunk index, and the low bits are the tile
-    // index in the chucnk.
-    u32 abs_tile_x;
-    u32 abs_tile_y;
-    u32 abs_tile_z;
-
-    // These are offset from the tile center.
-    real32 offset_x;
-    real32 offset_y;
 };
 
 struct Game_State {
     World* world;
+    Memory_Arena world_arena;
 
-    World_Position player_pos;
+    Tile_Map_Position player_pos;
     //i32 player_tile_x;
     //i32 player_tile_y;
 
