@@ -1,3 +1,8 @@
+
+//#if !defined(ERROR_REMOVER)
+//#include "core.h"
+//#endif
+
 #if !defined(CORE_TILE_H)
 
 struct Tile_Chunk {
@@ -13,8 +18,9 @@ struct Tile_Map {
     real32 tile_side_in_pixels;
     real32 meters_to_pixels;
 
-    i32 tile_chunk_count_x;
-    i32 tile_chunk_count_y;
+    u32 tile_chunk_count_x;
+    u32 tile_chunk_count_y;
+    u32 tile_chunk_count_z;
 
     Tile_Chunk* tile_chunks;
 };
@@ -22,9 +28,16 @@ struct Tile_Map {
 struct Tile_Chunk_Position {
     u32 tile_chunk_x;
     u32 tile_chunk_y;
+    u32 tile_chunk_z;
 
     u32 rel_tile_x;
     u32 rel_tile_y;
+    u32 rel_tile_z;
+};
+
+struct Tile_Map_Difference {
+    v2 dXY;
+    real32 dz;
 };
 
 struct Tile_Map_Position {
@@ -33,10 +46,10 @@ struct Tile_Map_Position {
     // the tile index in the chunk.
     u32 abs_tile_x;
     u32 abs_tile_y;
-    u32 abs_tize_z;
+    u32 abs_tile_z;
 
-    real32 offset_x;
-    real32 offset_y;
+    v2 offset;
+    real32 offset_z;
 };
 
 //struct Tile_Map_Position {

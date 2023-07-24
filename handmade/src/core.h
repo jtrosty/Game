@@ -44,6 +44,9 @@ typedef size_t memory_index;
 #define Gigabytes(Value) (Megabytes(Value)*1024LL)
 #define Terabytes(Value) (Gigabytes(Value)*1024LL)
 
+#define Minimum(A, B) ((A < B) ? (A) : (B))
+#define Maximum(A, B) ((A > B) ? (A) : (B))
+
 struct Thread_Context
 {
     int place_holder;
@@ -56,6 +59,7 @@ struct Thread_Context
 */
 
 #include "core_math.h"
+#include "core_intrinsics.h"
 #include "core_tilemap.h"
 
 typedef struct Debug_Read_File_Result
@@ -78,6 +82,7 @@ inline u32 safeTruncateU64(u64 value) {
     u32 result = (u32)value;
     return result;
 }
+
 
 
 struct Game_Offscreen_Buffer
@@ -196,31 +201,52 @@ struct World {
     Tile_Map* tile_map;
 };
 
+
+struct Loaded_Bitmap {
+    u32* pixels;
+    u32 width;
+    u32 height;
+};
+
+struct Hero_Bitmaps {
+    i32 align_x;
+    i32 align_y;
+    Loaded_Bitmap head;
+    Loaded_Bitmap cape;
+    Loaded_Bitmap torso;
+};
+
+struct Entity {
+    bool32 exists;
+    Tile_Map_Position p;
+    v2 dp;
+    u32 facingDirection;
+    real32 width;
+    real32 heigth;
+};
+
 struct Game_State {
     World* world;
     Memory_Arena world_arena;
 
-    Tile_Map_Position player_pos;
-    //i32 player_tile_x;
-    //i32 player_tile_y;
+    u32 camera_following_entity_index;
+    u32 player_index_for_controllers[ArrayCount(((Game_Input*)0)->controllers)];
+    u32 entity_count;
+    Entity entities[256];
 
-    //i32 player_tile_map_x;
-    //i32 player_tile_map_y;
-
-    //int player_x;
-    //int player_y;
-    int player_side_length_pixels;
-    real32 player_side_length;
+    // Player Stuff ----------------
+    //Tile_Map_Position player_pos;
     int player_speed_scaler;
-    int player_max_distance_per_frame;
-    real32 t_jump;
+    real32 player_side_length;
+    Hero_Bitmaps hero_bitmaps[4];
+    v2 d_player_p;
 
+    //-------------------------------
+
+    Tile_Map_Position camera_pos;
+    Loaded_Bitmap DEBUG_bitmap;
 
     // DEBUG stuff
     int tone_hz;
-    int green_offset;
-    int blue_offset;
-    
     real32 t_sine;
-
 };

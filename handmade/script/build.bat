@@ -1,4 +1,5 @@
-@echo off
+echo "building win32 platform"
+set PWD=%~dp0
 
 REM set CommonCompilerFlags=-WL -Od -MTd -nologo -Gm- -GR- -EHa- -Od -Oi -WX -W4 -wd4505 -wd4244 -wd4201 -wd4100 -wd4189 -DHANDMADE_INTERNAL=1 -DHANDMADE_SLOW=1 -DHANDMADE_WIN32=1 -FC -Z7 -Gs9999999
 
@@ -7,20 +8,23 @@ set CommonLinkerFlags= -incremental:no -opt:ref user32.lib gdi32.lib winmm.lib
 
 REM TODO - can we just build both with one exe?
 
-IF NOT EXIST build mkdir build
-pushd build
+IF NOT EXIST w:\build mkdir w:\build
+pushd w:\build
+REM pushd C:code\games\Game\handmade\build
 
 REM 32-bit build
 REM cl %CommonCompilerFlags% ..\handmade\code\win32_platform.cpp /link -subsystem:windows,5.1 %CommonLinkerFlags%
+
 
 REM 64-bit build
 del *.pdb > NUL 2> NUL
 REM cl %InitialCompilerFlags% -o core ..\src\win32_platform.cpp -Fmwin32_platform.map /link  %CommonLinkerFlags%
 echo WAITING FOR PDB > lock.tmp
-cl %CommonCompilerFlags% ..\src\core.cpp -Fmcore.map -LD /link -incremental:no -opt:ref -PDB:core_%random%.pdb -EXPORT:GameGetSoundSamples -EXPORT:GameUpdateAndRender
+cl %CommonCompilerFlags% w:\src\core.cpp -Fmcore.map -LD /link -incremental:no -opt:ref -PDB:core_%random%.pdb -EXPORT:GameGetSoundSamples -EXPORT:GameUpdateAndRender
 del lock.tmp
-cl %CommonCompilerFlags% ..\src\win32_platform.cpp -Fmwin32_platform.map /link %CommonLinkerFlags%
+cl %CommonCompilerFlags% w:\src\win32_platform.cpp -Fmwin32_platform.map /link %CommonLinkerFlags%
 popd
+echo "DONE building win32 platform"
 
 
 REM Compiler Flags:

@@ -1,3 +1,4 @@
+#if !defined(WIN32_CORE_H)
 
 struct Win32_Sound_Output
 {
@@ -31,3 +32,6 @@ struct Win32_Debug_Time_Marker {
     DWORD flipe_play_cursor;
     DWORD flip_write_cursor;
 };
+
+#define WIN32_CORE_H
+#endif

@@ -1,5 +1,24 @@
 // Not needed because i"m running with windows A funcitons
 /*
+  TODO(casey):  THIS IS NOT A FINAL PLATFORM LAYER!!!
+  
+  - Make the right calls so Windows doesn't think we're "still loading" for a bit after we actually start
+  - Saved game locations
+  - Getting a handle to our own executable file
+  - Asset loading path
+  - Threading (launch a thread)
+  - Raw Input (support for multiple keyboards)
+  - ClipCursor() (for multimonitor support)
+  - QueryCancelAutoplay
+  - WM_ACTIVATEAPP (for when we are not the active application)
+  - Blit speed improvements (BitBlt)
+  - Hardware acceleration (OpenGL or Direct3D or BOTH??)
+  - GetKeyboardLayout (for French keyboards, international WASD support)
+  - ChangeDisplaySettings option if we detect slow fullscreen blit??
+
+   Just a partial list of stuff!!
+*/
+/*
 #ifndef UNICODE
 #define UNICODE
 #endif 
@@ -11,7 +30,8 @@
     frame rate:  I kind of have frames, 26 june
     dll stuff: 26 june 
     saved last 20 secs: starte 27
-    tile map: 
+    tile map: 10 July 
+    bitmap loading
 */
 #include "core.h"
 
@@ -86,6 +106,8 @@ global_variable char RUNNING = 1;
 global_variable i64 global_perf_count_frequency;
 global_variable LPDIRECTSOUNDBUFFER global_secondary_buffer;
 global_variable Win32_Offscreen_Buffer global_back_buffer;
+global_variable bool32 DEBUG_global_show_cursor;
+global_variable WINDOWPLACEMENT global_window_position = {sizeof(global_window_position)};
 
 static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 static void win32ProcessPendingMessage(Game_Controller_Input* keyboard_controller);
@@ -165,9 +187,23 @@ static void win32_process_keyboard_message(Game_Button_State* new_state, bool32 
 inline FILETIME win32_getLastWriteTime(char* filename) {
     FILETIME last_write_time = {};
     WIN32_FILE_ATTRIBUTE_DATA data;
+    // TODO CHANGED for CLANG 
+#if CLANG_COMPILE
+    if (GetFileAttributesEx((LPCWSTR)filename, GetFileExInfoStandard, &data)) {
+        last_write_time = data.ftLastWriteTime;
+    } 
+    else {
+
+    }
+#else 
     if (GetFileAttributesEx(filename, GetFileExInfoStandard, &data)) {
         last_write_time = data.ftLastWriteTime;
+    } 
+    else {
+
     }
+
+#endif
     return last_write_time;
 }
 
@@ -176,7 +212,13 @@ static Win32_Game_Code win32_loadGameCode(char* source_dll_name, char* temp_dll_
     //result.dll_last_write_time = win32
     result.dll_last_write_time = win32_getLastWriteTime(source_dll_name);
 
+    //TODO CHANGED ADDED LPCWSTR
+#if CLANG_COMPILE
+    CopyFile((LPCWSTR)source_dll_name, (LPCWSTR)temp_dll_name, FALSE);
+#else 
     CopyFile(source_dll_name, temp_dll_name, FALSE);
+    
+#endif
 
     result.game_code_dll = LoadLibraryA(temp_dll_name);
 
@@ -635,7 +677,12 @@ static Win32_Window_Dimension win32_getWindowDimension(HWND window) {
 static void win32_getInputFileLocation(Win32_State* state, bool32 input_stream, 
                                        int slot_index, int dest_count, char* dest) {
     char temp[64];
+    // TODO CHANGED for CLANG 
+#if CLANG_COMPILE
+    wsprintf((LPWSTR)temp, (LPWSTR)"loop_edit_&d_%d.hmi", slot_index, input_stream ? "input" : "state");
+#else 
     wsprintf(temp, "loop_edit_&d_%d.hmi", slot_index, input_stream ? "input" : "state");
+#endif
     win32_buildEXEPathFileName(state, temp, dest_count, dest);
 }
 
@@ -706,6 +753,36 @@ static void win32_playBackInput(Win32_State* state, Game_Input* new_input) {
     }
 }
 
+static void win32_toggleFullscreen(HWND window) {
+    // NOTE(casey): This follows Raymond Chen's prescription
+    // for fullscreen toggling, see:
+    // http://blogs.msdn.com/b/oldnewthing/archive/2010/04/12/9994016.aspx
+    
+    DWORD Style = GetWindowLong(window, GWL_STYLE);
+    if(Style & WS_OVERLAPPEDWINDOW)
+    {
+        MONITORINFO monitor_info = {sizeof(monitor_info)};
+        if(GetWindowPlacement(window, &global_window_position) &&
+           GetMonitorInfo(MonitorFromWindow(window, MONITOR_DEFAULTTOPRIMARY), &monitor_info))
+        {
+            SetWindowLong(window, GWL_STYLE, Style & ~WS_OVERLAPPEDWINDOW);
+            SetWindowPos(window, HWND_TOP,
+                         monitor_info.rcMonitor.left, monitor_info.rcMonitor.top,
+                         monitor_info.rcMonitor.right - monitor_info.rcMonitor.left,
+                         monitor_info.rcMonitor.bottom - monitor_info.rcMonitor.top,
+                         SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
+        }
+    }
+    else
+    {
+        SetWindowLong(window, GWL_STYLE, Style | WS_OVERLAPPEDWINDOW);
+        SetWindowPlacement(window, &global_window_position);
+        SetWindowPos(window, 0, 0, 0, 0, 0,
+                     SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER |
+                     SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
+    }
+}
+
 //************************* END REPLAY SECTION *****************************************
 int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
@@ -714,6 +791,10 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     // REMOVE
     int DEBUF_X_OFFSET = 0;
     
+#if HANDMADE_INTERNAL
+    DEBUG_global_show_cursor = true;
+#endif
+
     WNDCLASSA window_class = {0};
 
     const int INITIAL_WINDOW_X = 1280;
@@ -725,6 +806,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     window_class.lpfnWndProc   = WindowProc;
     window_class.hInstance = hInstance;
     window_class.lpszClassName = "Core_Window_Class";
+    window_class.hCursor = LoadCursor(0, IDC_ARROW);
     // window_class.lpfnWndProc = Win32MainWindowCallback;
     // WindowClass.hIcon;
 
@@ -920,6 +1002,10 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
                     new_controller->is_connected = true;
                     new_controller->is_analog = old_controller->is_analog;
                     // Controller is connected
+                    if ((new_controller->left_stick_average_x != 0.0f) |
+                        (new_controller->left_stick_average_y != 0.0f)) {
+                        new_controller->is_analog = true;
+                    }
 
                     // Sticks
                     new_controller->left_stick_average_x = win32_process_x_input_stick(
@@ -1171,7 +1257,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 #endif
             flip_wall_clock = win32_getWallClock();
 
-#if 0
+#if 1
             uint64 end_cycle_count = __rdtsc();
             uint64 cycles_elapsed = end_cycle_count - last_cycle_count;
             last_cycle_count = end_cycle_count;
@@ -1307,12 +1393,21 @@ static void win32ProcessPendingMessage(Game_Controller_Input* keyboard_controlle
 #endif
 */
                 }
+                if (is_down){
+                        bool32 alt_key_was_down = (msg.lParam & (1 << 29));
+                        if((VKCode == VK_F4) && alt_key_was_down)
+                        {
+                            RUNNING = false;
+                        }
+                        if((VKCode == VK_RETURN) && alt_key_was_down)
+                        {
+                            if(msg.hwnd)
+                            {
+                                win32_toggleFullscreen(msg.hwnd);
+                            }
+                        }
+                    }
 
-                bool32 alt_key_was_down = (msg.lParam & (1 << 29));
-                if((VKCode == VK_F4) && alt_key_was_down)
-                {
-                    RUNNING = false;
-                }
             } break;
 
             default:
@@ -1334,6 +1429,15 @@ static LRESULT CALLBACK WindowProc(HWND window, UINT uMsg, WPARAM wParam, LPARAM
             PostQuitMessage(0);
             RUNNING = 0;
         } break;
+        case WM_SETCURSOR: {
+            if(DEBUG_global_show_cursor) {
+                result = DefWindowProcA(window, uMsg, wParam, lParam);
+            }
+            else {
+                SetCursor(0);
+            }
+            break;
+        }
         case WM_SIZE: {
             // TODO: Remove?
             /*
