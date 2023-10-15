@@ -49,7 +49,7 @@ inline i32 clampInt32(i32 value, i32 high_spec) {
 }
 
 inline real32 squareRoot(real32 r32) {
-    real32 result = sqrt(r32);
+    real32 result = sqrtf(r32);
     return result;
 }
 
@@ -88,6 +88,53 @@ inline real32 core_atan2(real32 y, real32 x) {
     real32 result = atan2f(y, x);
     return result;
 }
+
+struct Bit_Scan_Result {
+    bool32 found;
+    u32 index;
+};
+inline Bit_Scan_Result findLeastSignificantSetBit(u32 value) {
+    Bit_Scan_Result result = {};
+
+#if COMPILER_MSVC
+        result.found = _BitScanForward((unsigned long*)&result.index, value);
+#else
+        for (u32 test = 0; test < 32; ++test) {
+            if (value & (1 << test)) {
+                result.index = test;
+                result.found = true;
+                break;
+            }
+        }
+#endif
+        return result;
+}
+
+static u32 rotateLeft(u32 Value, i32 Amount)
+{
+#if COMPILER_MSVC
+    uint32 result = _rotl(Value, Amount);
+#else
+    // TODO(casey): Actually port this to other compiler platforms!
+    Amount &= 31;
+    uint32 result = ((Value << Amount) | (Value >> (32 - Amount)));
+#endif
+
+    return(result);
+}
+
+static u32 rotateRight(u32 Value, i32 Amount) {
+#if COMPILER_MSVC
+    uint32 Result = _rotr(Value, Amount);
+#else
+    // TODO(casey): Actually port this to other compiler platforms!
+    Amount &= 31;
+    uint32 Result = ((Value >> Amount) | (Value << (32 - Amount)));
+#endif
+
+    return(Result);
+}
+
 
 #define CORE_INTRINSICS_H
 #endif

@@ -29,6 +29,7 @@ typedef double real64;
 
 typedef size_t memory_index;
 
+#define InvalidCodePath Assert(!"InvalidCodePath");
 
 #if HANDMADE_SLOW
 // TODO(casey): Complete assertion macro - don't worry everyone!
@@ -58,9 +59,32 @@ struct Thread_Context
    blocking and the write doesn't protect against lost data!
 */
 
+struct Memory_Arena {
+    memory_index size;
+    u8* base;
+    memory_index used;
+};
+
+static void initializeArena(Memory_Arena* arena, memory_index size, u8* base) {
+    arena->size = size;
+    arena->base = base;
+    arena->used = 0;
+}
+
+#define pushStruct(arena, type) (type*)pushSize_(arena, sizeof(type))
+#define pushArray(arena, count, type) (type*)pushSize_(arena, (count) * sizeof(type))
+static void* pushSize_(Memory_Arena* arena, memory_index size) {
+    // All memory when initial gained from valloc is cleared to zero
+    Assert((arena->used + size) <= arena->size);
+    void* result = arena->base + arena->used;
+    arena->used += size;
+
+    return result;
+}
+
 #include "core_math.h"
 #include "core_intrinsics.h"
-#include "core_tilemap.h"
+#include "core_world.h"
 
 typedef struct Debug_Read_File_Result
 {
@@ -190,22 +214,10 @@ typedef GAME_UPDATE_AND_RENDER(game_update_and_render);
 typedef GAME_GET_SOUND_SAMPLES(game_get_sound_samples);
 
 
-struct Memory_Arena {
-    memory_index size;
-    u8* base;
-    memory_index used;
-};
-
-
-struct World {
-    Tile_Map* tile_map;
-};
-
-
 struct Loaded_Bitmap {
     u32* pixels;
-    u32 width;
-    u32 height;
+    i32 width;
+    i32 height;
 };
 
 struct Hero_Bitmaps {
@@ -216,13 +228,45 @@ struct Hero_Bitmaps {
     Loaded_Bitmap torso;
 };
 
-struct Entity {
-    bool32 exists;
-    Tile_Map_Position p;
+
+enum Entity_Type {
+    entityType_Null,
+
+    entityType_Hero,
+    entityType_Wall,
+    entityType_Familiar,
+    entityType_Monster,
+    entityType_Sword,
+};
+struct High_Entity {
+    v2 p; // Relative to the camera
     v2 dp;
+
+    u32 abs_tile_z;
     u32 facingDirection;
-    real32 width;
-    real32 heigth;
+
+    real32 z;
+    real32 dZ;
+
+    u32 low_entity_index;
+};
+
+struct Low_Entity {
+    Entity_Type type;
+    World_Position p;
+    real32 width; 
+    real32 height;
+
+    // NOTE: This is for stairs
+    bool32 colliders;
+    i32 d_abs_tile_z;
+    u32 high_entity_index;
+};
+
+struct Entity {
+    u32 low_index;
+    Low_Entity* low;
+    High_Entity* high;
 };
 
 struct Game_State {
@@ -231,22 +275,46 @@ struct Game_State {
 
     u32 camera_following_entity_index;
     u32 player_index_for_controllers[ArrayCount(((Game_Input*)0)->controllers)];
-    u32 entity_count;
-    Entity entities[256];
+
+    u32 low_entity_count;
+    Low_Entity low_entities[10000];
+
+    u32 high_entity_count;
+    High_Entity high_entities[256];
+
+    Loaded_Bitmap backdrop;
+    Loaded_Bitmap shadow;
+    Loaded_Bitmap tree;
+    Loaded_Bitmap rock;
+    Hero_Bitmaps hero_bitmap[4];
 
     // Player Stuff ----------------
     //Tile_Map_Position player_pos;
     int player_speed_scaler;
     real32 player_side_length;
-    Hero_Bitmaps hero_bitmaps[4];
     v2 d_player_p;
 
     //-------------------------------
-
-    Tile_Map_Position camera_pos;
+    World_Position camera_pos;
     Loaded_Bitmap DEBUG_bitmap;
 
+    real32 meters_to_pixels;
     // DEBUG stuff
     int tone_hz;
     real32 t_sine;
+};
+
+struct Entity_Visible_Piece {
+    Loaded_Bitmap* bitmap;
+    v2 offset;
+    real32 offset_z;
+    real32 entity_z_c;
+    real32 r, g, b, a;
+    v2 dim;
+};
+
+struct Entity_Visible_Piece_Group {
+    Game_State* game_state;
+    u32 piece_count;
+    Entity_Visible_Piece pieces[32];
 };

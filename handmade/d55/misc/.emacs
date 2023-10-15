@@ -244,7 +244,7 @@
      (insert "   $Date: $\n")
      (insert "   $Revision: $\n")
      (insert "   $Creator: Casey Muratori $\n")
-     (insert "   $Notice: (C) Copyright 2014 by Molly Rocket, Inc. All Rights Reserved. $\n")
+     (insert "   $Notice: (C) Copyright 2015 by Molly Rocket, Inc. All Rights Reserved. $\n")
      (insert "   ======================================================================== */\n")
      (insert "\n")
      (insert "#define ")
@@ -265,7 +265,7 @@
      (insert "   $Date: $\n")
      (insert "   $Revision: $\n")
      (insert "   $Creator: Casey Muratori $\n")
-     (insert "   $Notice: (C) Copyright 2014 by Molly Rocket, Inc. All Rights Reserved. $\n")
+     (insert "   $Notice: (C) Copyright 2015 by Molly Rocket, Inc. All Rights Reserved. $\n")
      (insert "   ======================================================================== */\n")
   )
 

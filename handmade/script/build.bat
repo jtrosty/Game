@@ -1,4 +1,5 @@
 echo "building win32 platform"
+@echo off
 set PWD=%~dp0
 
 REM set CommonCompilerFlags=-WL -Od -MTd -nologo -Gm- -GR- -EHa- -Od -Oi -WX -W4 -wd4505 -wd4244 -wd4201 -wd4100 -wd4189 -DHANDMADE_INTERNAL=1 -DHANDMADE_SLOW=1 -DHANDMADE_WIN32=1 -FC -Z7 -Gs9999999

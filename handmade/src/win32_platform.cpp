@@ -23,7 +23,7 @@
 #define UNICODE
 #endif 
 
-/*
+
     Gamepad basics: done 15 june
     Keyboard: done 16 June
     Sound: We have a sound buffer 25 June
@@ -33,6 +33,34 @@
     tile map: 10 July 
     bitmap loading
 */
+    //
+    // NOTE(casey): Compilers
+    //
+
+#if !defined(COMPILER_MSVC)
+#define COMPILER_MSVC 0
+#endif
+
+#if !defined(COMPILER_LLVM)
+#define COMPILER_LLVM 0
+#endif
+
+#if !COMPILER_MSVC && !COMPILER_LLVM
+#if _MSC_VER
+#undef COMPILER_MSVC
+#define COMPILER_MSVC 1
+#else
+    // TODO(casey): Moar compilerz!!!
+#undef COMPILER_LLVM
+#define COMPILER_LLVM 1
+#endif
+#endif
+
+#if COMPILER_MSVC
+#include <intrin.h>
+#endif
+
+
 #include "core.h"
 
 #include <windows.h>
@@ -846,10 +874,16 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 
     // Game code loading
     char source_game_code_dll_full_path[WIN32_STATE_FILE_NAME_COUNT];
+    char temp_game_code_dll_full_path[WIN32_STATE_FILE_NAME_COUNT];
+#if CLANG_COMPILE
+    win32_buildEXEPathFileName(&win32_state, "core_clang.dll", sizeof(source_game_code_dll_full_path), source_game_code_dll_full_path);
+
+    win32_buildEXEPathFileName(&win32_state, "core_clang_temp.dll", sizeof(temp_game_code_dll_full_path), temp_game_code_dll_full_path);
+#else
     win32_buildEXEPathFileName(&win32_state, "core.dll", sizeof(source_game_code_dll_full_path), source_game_code_dll_full_path);
 
-    char temp_game_code_dll_full_path[WIN32_STATE_FILE_NAME_COUNT];
     win32_buildEXEPathFileName(&win32_state, "core_temp.dll", sizeof(temp_game_code_dll_full_path), temp_game_code_dll_full_path);
+#endif
 
     UINT desired_scheduler_ms = 1;
     bool32 sleep_is_grannular = (timeBeginPeriod(desired_scheduler_ms) == TIMERR_NOERROR);
@@ -943,7 +977,11 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 
         // DEBUG
         Game_State* game_state = (Game_State*)game_memory.permanent_storage;
+#if CLANG_COMPILE
         Win32_Game_Code game = win32_loadGameCode(source_game_code_dll_full_path, temp_game_code_dll_full_path);
+#else
+        Win32_Game_Code game = win32_loadGameCode(source_game_code_dll_full_path, temp_game_code_dll_full_path);
+#endif
         u32 load_counter = 0;
 
         // Run the message loop.

@@ -1,21 +1,4 @@
 
-#ifndef ERROR_REMOVER
-#include "core.h"
-#include "core_tilemap.h"
-#endif
-
-inline Tile_Chunk* getTileChunk(Tile_Map* tile_map, u32 tile_chunk_x, u32 tile_chunk_y, u32 tile_chunk_z) { 
-    Tile_Chunk* tile_chunk = 0;
-    if ((tile_chunk_x >= 0) && (tile_chunk_x < tile_map->tile_chunk_count_x) &&
-        (tile_chunk_y >= 0) && (tile_chunk_y < tile_map->tile_chunk_count_y) &&
-        (tile_chunk_z >= 0) && (tile_chunk_z < tile_map->tile_chunk_count_z)) {
-            tile_chunk = &tile_map->tile_chunks[
-                tile_chunk_z * tile_map->tile_chunk_count_y* tile_map->tile_chunk_count_x +
-                tile_chunk_y * tile_map->tile_chunk_count_x + 
-                tile_chunk_x];
-    }
-    return tile_chunk;
-}
 
 
 inline void recanonicalizeCoordinate(Tile_Map* tile_map, u32* tile, real32* tile_rel) {
