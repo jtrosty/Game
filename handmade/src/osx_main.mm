@@ -1,60 +1,141 @@
-
-#include <stdio.h>
 #include <AppKit/AppKit.h>
 
-typedef global_variable static
+#include "core.h"
+
+#include <cassert>
+
+#define NS_PRIVATE_IMPLEMENTATION
+#define MTL_PRIVATE_IMPLEMENTATION
+#define MTK_PRIVATE_IMPLEMENTATION
+#define CA_PRIVATE_IMPLEMENTATION
+#include <Metal/Metal.hpp>
+#include <AppKit/AppKit.hpp>
+#iMetal.hppnclude <MetalKit/MetalKit.hpp>
+#include <Foundation/Foundation.hpp>
+#include <QuartzCore/QuartzCore.hpp>
+
+
+#define global_variable static
+#define local_persist static
+#define internal static
 
 global_variable float global_render_width = 1024;
-static float global_render_height = 720;
-static bool RUNNING = true;
+global_variable float global_render_height = 720;
+global_variable bool RUNNING = true;
+global_variable u8 *buffer;
 
-@interface MainWindowDelegate: NSObject<NSWindowDelegate>
-@end
 
-@implementation MainWindowDelegate
--(void)WindowWillClose:(id)sender {
-    RUNNING = false;
-}
-@end
+#import <AppKit/AppKit.h>
 
-int main(int argc, char** argv) {
+#if 0
+struct window
+{
+    // the data...
+    float X, Y;
+    float Width, Height;
+    uint_32 BackgroundColor;
+};
 
-    MainWindowDelegate* main_window_delegate = [[MainWindowDelegate alloc] init];
+class NSWindow {
 
-    NSRect screen_rect = [[NSScreen main_screen] frame];
+    // properties not directly accessible.
 
-    NSRect window_rect = NSMakeRect((screen_rect.size.width - global_render_width) * .5, 
-                                    (screen_rect.size.height - global_render_height) * .5, 
-                                    global_render_width, 
-                                    global_render_height);
+    // there is a struct in here!
+    struct window
+    {
+        // the data...
+        float X, Y;
+        float Width, Height;
+        uint_32 BackgroundColor;
+    };
 
-    NSWindow* window = [[NSWindow alloc] initWithContentRect:initial_frame]
-                                        styleMask: NSWindowStyleMaskTitled |
-                                                   NSWindowStyleMaskClosable |
-                                                   NSWindowStyleMaskMiniaturizable |
-                                                   NSWindowStyleMaskResizable
-                                        backing:NSBackingStoreBuffered
-                                        defer:NO];
-
-    [NSApplication sharedApplication];
+    // Initializers
     
-    printf("You are great!\n");
 
-    while(RUNNING) {
+    // Constructors
+    // Destructors
 
-        NSEvent* event;
-        do {
-            event = [NSApp nextEventMatchingMask: NSEventMaskAny
-                                       untilDate: nil
-                                          inMode: NSDefaultRunLoopMode
-                                         dequeue: YES];
-            switch ([event type]) {
-                default:
-                [NSApp sendEvent: event];
-            }
-        } while (event != nil);
+    @property float Width;
+
+    // Getters and Setters (A.K.A. "accessors")
+    - (float) GetWidth {
+        return _Width;
     }
 
-    printf("Finished running.");
-    return 0;
+
+    // Because you don't have direct access to the data!!
+
+    /*
+    real32 X, Y;
+    real32 Width, Height;
+    uint32 BackgroundColor;*/
 }
+
+struct window
+{
+    NSRect WindowRect;
+    styleMask;
+    backingStoreType;
+    deferFlag;
+    NSColor BackgroundColor;
+    NSString Title;
+}
+#endif
+
+@interface
+GameWindowDelegate: NSObject<NSWindowDelegate>
+@end
+
+@implementation GameWindowDelegate
+-(void)windowWillClose:(NSNotification*)notification {
+    [NSApp terminate: nil];
+}
+@end
+
+
+int main(int argc, const char * argv[]) {
+    NSLog(@"Mooselutions is running!");    
+
+    NSRect WindowRectangle = NSMakeRect(0.0f, 0.0f, 1024.0f, 1024.f);
+
+    NSWindow *Window = [[NSWindow alloc] initWithContentRect: WindowRectangle 
+                                                   styleMask: (NSWindowStyleMaskTitled |
+                                                               NSWindowStyleMaskClosable)
+                                                     backing: NSBackingStoreBuffered 
+                                                       defer: NO];
+    GameWindowDelegate* WindowDelegate = [[GameWindowDelegate alloc] init];
+    [Window setDelegate: WindowDelegate];
+
+    [Window setBackgroundColor: [NSColor redColor]];
+    [Window setTitle: @"Mooselutions"];
+    [Window makeKeyAndOrderFront: nil];
+    
+    id<MTLDevice> MetalDevice = MTLCreateSystemDefaultDevice();
+
+    return NSApplicationMain(argc, argv);
+}
+
+// View class hierarchy
+// NSView (all views inherit from this)
+//  |
+// MTKView (subclass)
+
+// Views / View Hierarchy
+// Hierarchical
+
+// Root View --> A list of instructions for the GPU
+//   |
+//   Child View
+//  |      |
+//  CV    CV
+
+// Two types of space of GPU
+// 1. Vertex buffers
+// 2. Texture memory
+
+// Stuff that needs to get drawn
+
+//  View can contain other views
+
+// Windows 
+// NSView
