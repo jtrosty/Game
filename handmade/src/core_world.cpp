@@ -221,6 +221,7 @@ inline World_Position centeredChunkPoint(u32 chunk_x, u32 chunk_y, u32 chunk_z) 
     return result;
 }
 
+#define InvalidCodePath Assert(!"InvalidCodePath");
 inline void changeEntityLocationRaw(Memory_Arena* arena, World* world, u32 low_entity_index, 
                                     World_Position* old_p, World_Position* new_p) {
     // TODO(casey): If this moves an entity into the camera bounds, should it automatically
