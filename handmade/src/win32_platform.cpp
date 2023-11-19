@@ -144,6 +144,7 @@ static void win32_process_x_input_button(DWORD x_input_state, Game_Button_State*
                                          DWORD button_bit, Game_Button_State* new_state);
 static real32 win32_process_x_input_stick(SHORT value, SHORT dead_zone_threshold);
 static void win32_process_keyboard_message(Game_Button_State* new_state, bool32 is_down);
+
 // DSound Shenanigans
 #define DIRECT_SOUND_CREATE(name) HRESULT WINAPI name(LPCGUID pcGuidDevice, LPDIRECTSOUND *ppDS, LPUNKNOWN pUnkOuter)
 typedef DIRECT_SOUND_CREATE(_DirectSoundCreate);
@@ -302,7 +303,6 @@ static void win32_buildEXEPathFileName(Win32_State* state, char* filename, int d
                 stringLength(filename), filename, dest_count, dest);
 }
 
-
 static void win32_getEXEFileName(Win32_State* state) {
     DWORD size_of_filename = GetModuleFileNameA(0, state->EXE_file_name, sizeof(state->EXE_file_name));
     state->one_past_last_EXE_filename_slash = state->EXE_file_name;
@@ -312,7 +312,6 @@ static void win32_getEXEFileName(Win32_State* state) {
         }
     }
 }
-
 
 //********************************** END Section ***************************************//
 
