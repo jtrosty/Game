@@ -30,7 +30,38 @@ const unsigned int screenWidth = 800;
 const unsigned int screenHeight = 450;
 
 int MAX_CONTROLLER_COUNT = 4;
+/*
+#define DEBUG_PLATFORM_FREE_FILE_MEMORY(name) void name(Thread_Context* thread, void* memory)
+typedef DEBUG_PLATFORM_FREE_FILE_MEMORY(debug_platform_free_file_memory);
 
+#define DEBUG_PLATFORM_READ_ENTIRE_FILE(name) Debug_Read_File_Result name(Thread_Context* Thread, char* filename)
+typedef DEBUG_PLATFORM_READ_ENTIRE_FILE(debug_platform_read_entire_file);
+
+#define DEBUG_PLATFORM_WRITE_ENTIRE_FILE(name) bool32 name(Thread_Context* thread, char* filename, uint32 memory_size, void* memory)
+typedef DEBUG_PLATFORM_WRITE_ENTIRE_FILE(debug_platform_write_entire_file);
+*/
+
+//**************************** DEBUG FILE SECTION******************************//
+DEBUG_PLATFORM_FREE_FILE_MEMORY(debug_platformFreeFileMemory) {
+    InvalidCodePath
+}
+
+DEBUG_PLATFORM_READ_ENTIRE_FILE(debug_platformReadEntireFile) {
+
+    Debug_Read_File_Result result = {};
+    result.contents = (void*)LoadFileData(filename, &result.contents_size);
+
+    return result;
+}
+
+DEBUG_PLATFORM_WRITE_ENTIRE_FILE(debug_platformWriteEntireFile) {
+    bool32 result = SaveFileData(filename, memory, memory_size);
+
+    return result;
+}
+
+
+//******************************** END DEBUG ************************************//
 
 struct Ray_Window_Dimension{
     int width;
@@ -119,12 +150,10 @@ mac_getFileModTime(const char* filename) {
     return 0;
 }
 
-static Ray_Game_Code* mac_LoadDllGameCode(const char* game_dll_full_path, const char* temp_dll_full_path) {
+static void mac_LoadDllGameCode(Ray_Game_Code* game_code, const char* game_dll_full_path, const char* temp_dll_full_path) {
 
-    Ray_Game_Code* result = {};
-
-    result->dll_last_write_time = GetFileModTime(game_dll_full_path);
-    if (result->dll_last_write_time) {
+    game_code->dll_last_write_time = GetFileModTime(game_dll_full_path);
+    if (game_code->dll_last_write_time) {
         printf("We got the result");
     }
 
@@ -138,22 +167,21 @@ static Ray_Game_Code* mac_LoadDllGameCode(const char* game_dll_full_path, const 
     }   // Save data to file from byte array (write), returns true on success
 
     // Use the copied dll for running so that way the original is available for writing when rebuilding
-    result->game_code_dll = dlopen(temp_dll_full_path, RTLD_NOW);
+    game_code->game_code_dll = dlopen(temp_dll_full_path, RTLD_NOW);
 
-    if (result->game_code_dll) {
-        result->update_and_render_fn = (game_update_and_render*)dlsym(result->game_code_dll, "GameUpdateAndRender");
-        result->get_sound_samples_fn = (game_get_sound_samples*)dlsym(result->game_code_dll, "GameGetSounddSamples");
-        result->is_valid = (result->update_and_render_fn && result->get_sound_samples_fn);
+    if (game_code->game_code_dll) {
+        game_code->update_and_render_fn = (game_update_and_render*)dlsym(game_code->game_code_dll, "GameUpdateAndRender");
+        game_code->get_sound_samples_fn = (game_get_sound_samples*)dlsym(game_code->game_code_dll, "GameGetSoundSamples");
+        game_code->is_valid = (game_code->update_and_render_fn && game_code->get_sound_samples_fn);
     }
 
     // If there is a failure, set the functions pointers to zero.
-    if (!result->is_valid) {
-        result->update_and_render_fn = 0;
-        result->get_sound_samples_fn = 0;
+    if (!game_code->is_valid) {
+        game_code->update_and_render_fn = 0;
+        game_code->get_sound_samples_fn = 0;
     }
-
-    return result;
 }
+
 // Not Tested
 static void mac_unloadGameCode(Ray_Game_Code* game_code) {
     if (game_code->game_code_dll) {
@@ -211,8 +239,6 @@ main(int argv, char* argc[]) {
     sound_buffer.sample_count = 0;
     sound_buffer.samples_per_second = 0;
     
-
-
     Ray_Game_Code game_code = {0};
     Ray_State ray_state = {0};
     Thread_Context thread = {0};
@@ -267,7 +293,7 @@ main(int argv, char* argc[]) {
     SaveFileText("/Users/jonathantrost/Documents/code/warfare/Game/handmade/build/test.txt", "adding this test\0");
     // TODO does this work as expected  
 
-    game_code = *mac_LoadDllGameCode(game_dll_full_path, temp_dll_full_path);
+    mac_LoadDllGameCode(&game_code,game_dll_full_path, temp_dll_full_path);
 
     //--------------------------------------------------------------------------------------
 
@@ -278,7 +304,7 @@ main(int argv, char* argc[]) {
         //----------------------------------------------------------------------------------
         if (mac_checkDllChanges(&game_code, game_dll_full_path)) {
             mac_unloadGameCode(&game_code);
-            game_code = *mac_LoadDllGameCode(game_dll_full_path, temp_dll_full_path);
+            mac_LoadDllGameCode(&game_code, game_dll_full_path, temp_dll_full_path);
         }
         //----------------------------------------------------------------------------------
         
