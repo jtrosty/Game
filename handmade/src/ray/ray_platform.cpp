@@ -1,4 +1,5 @@
-#include "../../external/raylib.h"
+//#include "../../external/raylib.h"
+#include <raylib.h>
 #include "../core.h"
 #include <cstdio>
 #include <dlfcn.h>
@@ -13,8 +14,6 @@
 // : testing
 //
 //
-//kk
-
 
 // NOTE: Gamepad name ID depends on drivers and OS
 #define XBOX360_LEGACY_NAME_ID  "Xbox Controller"
@@ -26,8 +25,8 @@
     #define PS3_NAME_ID         "PLAYSTATION(R)3 Controller"
 #endif
 
-const unsigned int screenWidth = 800;
-const unsigned int screenHeight = 450;
+const unsigned int screenWidth = 1280;
+const unsigned int screenHeight = 720;
 
 int MAX_CONTROLLER_COUNT = 4;
 /*
@@ -42,17 +41,82 @@ typedef DEBUG_PLATFORM_WRITE_ENTIRE_FILE(debug_platform_write_entire_file);
 */
 
 //**************************** DEBUG FILE SECTION******************************//
+
+static void winToRaylibPixelFormat(Game_Offscreen_Buffer* buffer) {
+    // Raylib is    R8 G8 B8 A8
+    // Windows is   A8 R8 G8 B8
+    int num_of_pixels = (buffer->height * buffer->width) / buffer->bytes_per_pixel;
+    u32* pixels = (u32*)buffer->memory;
+    //u32 alpha_mask = 0x00FFFFFF;
+    u32 alpha_mask = 0x00000000;
+    for (int i = 0; i < num_of_pixels; i++) {
+        //*pixel = 0xFF0000ff + x_offset++;
+
+        u32 pixel = pixels[i];
+        pixels[i] = (pixel << 8) | alpha_mask;
+        // 0xFF000000 black
+        // 0xFFFF0000 orange maybe red
+        // 0x00FF0000 red
+        // 0x0000FF00 green
+        // 0x000000FF blue
+    }
+}
+
+static void catStrings(size_t source_a_count, char* source_a, 
+                       size_t source_b_count, char* source_b,
+                       size_t dest_count, char* dest) {
+    for (int index = 0; index < source_a_count; ++index) {
+        *dest++ = *source_a++;
+    }
+    for (int index = 0; index < source_b_count; ++index) {
+        *dest++ = *source_b++;
+    }
+    *dest++ = 0;
+}
+
+static int stringLength(char* string) {
+    int count = 0; 
+    while (*string++) {
+        ++count;
+    }
+    return count;
+}
+
 DEBUG_PLATFORM_FREE_FILE_MEMORY(debug_platformFreeFileMemory) {
     InvalidCodePath
 }
 
 DEBUG_PLATFORM_READ_ENTIRE_FILE(debug_platformReadEntireFile) {
 
+    char* start_of_path = "/Users/jonathantrost/Documents/code/warfare/Game/handmade/";
+    char* c = start_of_path;
+    u32 length_path_start = 0;
+    while (*c != '\0') {
+        c++;
+        length_path_start++;
+    }
+
     Debug_Read_File_Result result = {};
-    result.contents = (void*)LoadFileData(filename, &result.contents_size);
+    char* char_ptr = filename;
+    u32 length_path = 0;
+    while (*char_ptr != '\0') {
+        char_ptr++;
+        length_path++;
+    }
+    u32 final_len = length_path_start + length_path;
+    char path_final[final_len + 1];
+    for (u32 i = 0; i < length_path_start; i++) {
+        path_final[i] = start_of_path[i];
+    }
+    for (u32 i = length_path_start; i < final_len; i++) {
+        path_final[i] = filename[i - length_path_start + 3];
+    }
+    path_final[final_len] = '\0';
+
+    result.contents = (void*)LoadFileData(path_final, &result.contents_size);
 
     return result;
-}
+} 
 
 DEBUG_PLATFORM_WRITE_ENTIRE_FILE(debug_platformWriteEntireFile) {
     bool32 result = SaveFileData(filename, memory, memory_size);
@@ -221,7 +285,7 @@ main(int argv, char* argc[]) {
     InitWindow(screenWidth, screenHeight, "raylib [core] example");
     InitAudioDevice();
 
-    SetTargetFPS(60);               // Set our game to run at 60 frames-per-second
+    SetTargetFPS(30);               // Set our game to run at 60 frames-per-second
     
     // Sound
     Music music = {0};
@@ -252,8 +316,11 @@ main(int argv, char* argc[]) {
     // Memory
     void* base_address = 0;
     Game_Memory game_memory = {0};
-    game_memory.permanent_storage_size = Kilobytes(32);
-    game_memory.transient_storage_size = Kilobytes(32);
+    game_memory.permanent_storage_size = Megabytes(32);
+    game_memory.transient_storage_size = Megabytes(32);
+    game_memory.DEBUG_platformReadEntireFile = debug_platformReadEntireFile;
+    game_memory.DEBUG_platformFreeFileMemory = debug_platformFreeFileMemory;
+    game_memory.DEBUG_platformWriteEntireFile = debug_platformWriteEntireFile;
     
     // TODO is the size correct here
     ray_state.total_size = game_memory.permanent_storage_size + game_memory.transient_storage_size;
@@ -276,11 +343,27 @@ main(int argv, char* argc[]) {
         // Failure ot get memory allocated for image
         TraceLog(1, "Failure to allocate memory for offscreen buffer.");
     }
-    Texture2D render_texture;
+    Image render_image = {0};
+    render_image.data = MemAlloc(buffer.width * buffer.height * buffer.bytes_per_pixel);
+    if (render_image.data) {
+        // success
+    //
+    } else {
+        // Failure ot get memory allocated for image
+        TraceLog(1, "Failure to allocate memory for offscreen buffer.");
+    }
+    render_image.width = buffer.width;
+    render_image.height = buffer.height;
+    render_image.mipmaps = 0;
+    render_image.format = PIXELFORMAT_UNCOMPRESSED_R8G8B8A8;
+    Texture2D render_texture = LoadTextureFromImage(render_image);
+    UpdateTexture(render_texture, buffer.memory);
+    /*
     render_texture.width = buffer.width;
     render_texture.height = buffer.height;
-    render_texture.format = PIXELFORMAT_UNCOMPRESSED_R32G32B32A32;
+    render_texture.format  = PIXELFORMAT_UNCOMPRESSED_R8G8B8A8;
     render_texture.mipmaps = 1;
+    */
 
     // Load game code
     //--------------------------------------------------------------------------------------
@@ -290,7 +373,7 @@ main(int argv, char* argc[]) {
     const char* temp_dll_full_path = "/Users/jonathantrost/Documents/code/warfare/Game/handmade/build/temp_ray_core.dylib";
     
     //char* hello = LoadFileText("../test.txt");
-    SaveFileText("/Users/jonathantrost/Documents/code/warfare/Game/handmade/build/test.txt", "adding this test\0");
+    SaveFileText("test.txt", "adding this test\0");
     // TODO does this work as expected  
 
     mac_LoadDllGameCode(&game_code,game_dll_full_path, temp_dll_full_path);
@@ -337,6 +420,26 @@ main(int argv, char* argc[]) {
                 new_input->controllers[controller_index].right_stick_average_x = (real32)GetGamepadAxisMovement(controller_index, GAMEPAD_AXIS_RIGHT_X);
                 new_input->controllers[controller_index].right_stick_average_y = (real32)GetGamepadAxisMovement(controller_index, GAMEPAD_AXIS_RIGHT_Y);
             }
+            else {
+                new_input->controllers[controller_index].is_connected = true;
+                new_input->controllers[controller_index].is_analog = false;
+
+                new_input->controllers[controller_index].back.ended_down = IsKeyDown(KEY_B);
+                new_input->controllers[controller_index].start.ended_down = IsKeyDown(KEY_G);
+
+                new_input->controllers[controller_index].action_up.ended_down = IsKeyDown(KEY_Q);
+                new_input->controllers[controller_index].action_down.ended_down = IsKeyDown(KEY_E);
+                new_input->controllers[controller_index].action_left.ended_down = IsKeyDown(KEY_F);
+                new_input->controllers[controller_index].action_right.ended_down = IsKeyDown(KEY_R);
+
+                new_input->controllers[controller_index].move_up.ended_down = IsKeyDown(KEY_UP);
+                new_input->controllers[controller_index].move_down.ended_down = IsKeyDown(KEY_DOWN);
+                new_input->controllers[controller_index].move_left.ended_down = IsKeyDown(KEY_LEFT);
+                new_input->controllers[controller_index].move_right.ended_down = IsKeyDown(KEY_RIGHT);
+
+                new_input->controllers[controller_index].left_shoulder.ended_down = IsKeyDown(KEY_X);
+                new_input->controllers[controller_index].right_shoulder.ended_down = IsKeyDown(KEY_Z);
+            }
         }
         //----------------------------------------------------------------------------------
         
@@ -349,7 +452,8 @@ main(int argv, char* argc[]) {
             game_code.update_and_render_fn(&thread, &game_memory, new_input, &buffer);
         }
         // TODO make sure the data is transfered properly
-        UpdateTexture(render_texture, &buffer.memory);
+        winToRaylibPixelFormat(&buffer);
+        UpdateTexture(render_texture, buffer.memory);
         
 
         // 
@@ -374,23 +478,19 @@ main(int argv, char* argc[]) {
 
             ClearBackground(RAYWHITE);
 
-            DrawTexture(render_texture, 0, 0, WHITE);
+            DrawTexture(render_texture, 0, 0, BLUE);
+            DrawCircleLines(400, 400, 100.0f, RED);
 
-            DrawText(TextFormat("DETECTED AXIS [%i]:", GetGamepadAxisCount(0)), 10, 50, 10, MAROON);
-
-            for (int i = 0; i < GetGamepadAxisCount(0); i++) {
-                DrawText(TextFormat("AXIS %i: %.02f", i, GetGamepadAxisMovement(0, i)), 20, 70 + 20*i, 10, DARKGRAY);
-            }
-
-            if (GetGamepadButtonPressed() != GAMEPAD_BUTTON_UNKNOWN) DrawText(TextFormat("DETECTED BUTTON: %i", GetGamepadButtonPressed()), 10, 430, 10, RED);
-    
-            else DrawText("DETECTED BUTTON: NONE", 10, 430, 10, GRAY);
+            DrawText(TextFormat("We need to make sure this works Trost with the most."), 10, 50, 10, MAROON);
 
         EndDrawing();
         //----------------------------------------------------------------------------------
     }
 
     // De-Initialization
+    
+    UnloadImage(render_image);
+    UnloadTexture(render_texture);
 
     CloseAudioDevice();
     CloseWindow();        // Close window and OpenGL context

@@ -922,6 +922,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
         global_secondary_buffer->GetCurrentPosition(&play_cursor, &write_cursor);
         DWORD unwrapped_write = write_cursor;
         if (unwrapped_write < play_cursor) {
+//kk
             unwrapped_write += sound_output.secondary_buffer_size;
         }
         DWORD bytes_between_cursors = unwrapped_write - play_cursor;

@@ -414,6 +414,7 @@ struct Add_Low_Entity_Result {
     Low_Entity* low;
     u32 low_index;
 };
+
 static Add_Low_Entity_Result addLowEntity(Game_State* game_state, Entity_Type type, World_Position* p) {
     Assert(game_state->low_entity_count < ArrayCount(game_state->low_entities));
     u32 entity_index = game_state->low_entity_count++;
@@ -752,14 +753,12 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
         hero_bitmaps[3].align_x = 72;
         hero_bitmaps[3].align_y = 182;
         
-        /*
         Debug_Read_File_Result file = memory->DEBUG_platformReadEntireFile(thread, filename);
         if(file.contents)
         {
             memory->DEBUG_platformWriteEntireFile(thread, "test.out", file.contents_size, file.contents);
             memory->DEBUG_platformFreeFileMemory(thread, file.contents);
         }
-        */
 
         initializeArena(&game_state->world_arena, 
                         memory->permanent_storage_size - sizeof(Game_State), 
@@ -1016,7 +1015,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
                 v2 min = { cen.x - 0.5f * tile_map->tile_side_in_pixels, cen.y - 0.5f * tile_map->tile_side_in_pixels};
                 v2 max = { cen.x + 0.5f * tile_map->tile_side_in_pixels, cen.y + 0.5f * tile_map->tile_side_in_pixels};
 
-                drawRectangle(buffer, min, max, gray, gray, gray); }
+                drawRectangle(buffer, min, max, 1.0f, gray, gray); }
             //test_gradient++;
         }
     }
