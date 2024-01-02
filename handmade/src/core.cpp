@@ -1015,7 +1015,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
                 v2 min = { cen.x - 0.5f * tile_map->tile_side_in_pixels, cen.y - 0.5f * tile_map->tile_side_in_pixels};
                 v2 max = { cen.x + 0.5f * tile_map->tile_side_in_pixels, cen.y + 0.5f * tile_map->tile_side_in_pixels};
 
-                drawRectangle(buffer, min, max, 1.0f, gray, gray); }
+                drawRectangle(buffer, min, max, gray, gray, gray); }
             //test_gradient++;
         }
     }

@@ -4,7 +4,7 @@ WARNING_FLAGS="-Wall -Wextra -Wpedantic"
 LIBS="'pkg-config --libs raylib' -lglfw lm ldl lpthred"
 LINK_FLAGS="-framework OpenGL -framework OpenAL -framework IOKit -framework CoreVideo -framework Cocoa"
 MAC_LINK_FLAGS="-framework CoreVideo -framework IOKit -framework Cocoa -framework GLUT -framework OpenGL"
-COMPILATION_FLAGS="-std=c++17 -O0 -g" #-undefined dynamic_lookup "
+COMPILATION_FLAGS="-std=c++17 -O0 -g -undefined dynamic_lookup"
 OUTPUT_DIR="build"
 
 ROOT_DIR=$PWD
@@ -60,13 +60,16 @@ if test -f ray_core.dylib; then
 fi
 
 pwd
-clang++ -v -dynamiclib -o ray_core.dylib "$SOURCE/core.cpp" -L $COMPILATION_FLAGS $MAC_LINK_FLAGS $RAYLIB_INCLUDE_FLAGS $HANDMADE_WARNING_FLAGS
-clang++ -v -o ray_platform $SOURCES_PLATFORM $FULL_RAYLIB_SRC/libraylib.a -L $RAYLIB_LIB -L $FULL_RAYLIB_SRC $COMPILATION_FLAGS $MAC_LINK_FLAGS $RAYLIB_INCLUDE_FLAGS $HANDMADE_WARNING_FLAGS #$RAYLIB_DEFINES 
+#clang++ -v -dynamiclib -o ray_core.dylib "$SOURCE/core.cpp" -L $COMPILATION_FLAGS $MAC_LINK_FLAGS $RAYLIB_INCLUDE_FLAGS $HANDMADE_WARNING_FLAGS
+clang++ -v -dynamiclib -o ray_core.dylib "$SOURCE/core.cpp" $MAC_LINK_FLAGS $RAYLIB_INCLUDE_FLAGS $HANDMADE_WARNING_FLAGS $COMPILATION_FLAGS
+clang++ -v -o ray_platform $SOURCES_PLATFORM  $FULL_RAYLIB_SRC/libraylib.a -I $RAYLIB_LIB $COMPILATION_FLAGS $MAC_LINK_FLAGS $RAYLIB_INCLUDE_FLAGS $HANDMADE_WARNING_FLAGS #$RAYLIB_DEFINES 
 #clang++ -v -o ray_platform_static $SOURCES_PLATFORM  $EXTERNAL_DIR  $COMPILATION_FLAGS $MAC_LINK_FLAGS $RAYLIB_INCLUDE_FLAGS $HANDMADE_WARNING_FLAGS #$RAYLIB_DEFINES 
 popd
 #clang++ $CFLAGS -o ./ray_platform ./src/ray/rayplatform.cpp $LIBS -L.?build/
 #clang -o ./build/mac ./src/.c -lm
 #
+#clang++ -v -dynamiclib -o ray_core.dylib "$SOURCE/core.cpp" -L $FULL_RAYLIB_SRC $DYLD_LIBRARY_PATH $COMPILATION_FLAGS $MAC_LINK_FLAGS $RAYLIB_INCLUDE_FLAGS $HANDMADE_WARNING_FLAGS
+#clang++ -v -o ray_platform $SOURCES_PLATFORM  $FULL_RAYLIB_SRC/libraylib.a -I $RAYLIB_LIB $COMPILATION_FLAGS $MAC_LINK_FLAGS $RAYLIB_INCLUDE_FLAGS $HANDMADE_WARNING_FLAGS #$RAYLIB_DEFINES 
 #
 #
 #dynamic

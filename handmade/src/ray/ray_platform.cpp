@@ -25,6 +25,8 @@
     #define PS3_NAME_ID         "PLAYSTATION(R)3 Controller"
 #endif
 
+const unsigned int LOG_VALUE = 1;
+
 const unsigned int screenWidth = 1280;
 const unsigned int screenHeight = 720;
 
@@ -48,7 +50,8 @@ static void winToRaylibPixelFormat(Game_Offscreen_Buffer* buffer) {
     int num_of_pixels = (buffer->height * buffer->width) / buffer->bytes_per_pixel;
     u32* pixels = (u32*)buffer->memory;
     //u32 alpha_mask = 0x00FFFFFF;
-    u32 alpha_mask = 0x00000000;
+    //u32 alpha_mask = 0xFFFFFF00;
+    u32 alpha_mask = 0x000000FF;
     for (int i = 0; i < num_of_pixels; i++) {
         //*pixel = 0xFF0000ff + x_offset++;
 
@@ -218,7 +221,7 @@ static void mac_LoadDllGameCode(Ray_Game_Code* game_code, const char* game_dll_f
 
     game_code->dll_last_write_time = GetFileModTime(game_dll_full_path);
     if (game_code->dll_last_write_time) {
-        printf("We got the result");
+        printf("We got the result\n");
     }
 
     // Time to copy file
@@ -228,9 +231,11 @@ static void mac_LoadDllGameCode(Ray_Game_Code* game_code, const char* game_dll_f
     unsigned char* loaded_dll = LoadFileData(game_dll_full_path, &loaded_dll_bytes_read);       
     if (!SaveFileData(temp_dll_full_path, loaded_dll, loaded_dll_bytes_read)) {
         printf("Failed to save temp dll\n");
+        TraceLog(LOG_VALUE, "Failed to save teh temp dll.");
     }   // Save data to file from byte array (write), returns true on success
 
     // Use the copied dll for running so that way the original is available for writing when rebuilding
+    //game_code->game_code_dll = dlopen(temp_dll_full_path, RTLD_NOW);
     game_code->game_code_dll = dlopen(temp_dll_full_path, RTLD_NOW);
 
     if (game_code->game_code_dll) {
@@ -238,11 +243,16 @@ static void mac_LoadDllGameCode(Ray_Game_Code* game_code, const char* game_dll_f
         game_code->get_sound_samples_fn = (game_get_sound_samples*)dlsym(game_code->game_code_dll, "GameGetSoundSamples");
         game_code->is_valid = (game_code->update_and_render_fn && game_code->get_sound_samples_fn);
     }
+    else {
+        printf("Failed to load game code dll\n");
+        TraceLog(LOG_VALUE, "Failed to load game code dll");
+    }
 
     // If there is a failure, set the functions pointers to zero.
     if (!game_code->is_valid) {
         game_code->update_and_render_fn = 0;
         game_code->get_sound_samples_fn = 0;
+        TraceLog(LOG_VALUE, "Both game code dlls were not loaded.");
     }
 }
 
@@ -257,13 +267,11 @@ static void mac_unloadGameCode(Ray_Game_Code* game_code) {
     game_code->get_sound_samples_fn = 0;
 }
 
-
 /*
 #define GAME_UPDATE_AND_RENDER(name) void name(Thread_Context* thread, Game_Memory* memory, Game_Input* input, Game_Offscreen_Buffer* buffer)
 
 #define GAME_GET_SOUND_SAMPLES(name) void name(Thread_Context* thread, Game_Memory* memory, Game_Sound_Output_Buffer* sound_buffer)
 */
-
 
 struct Ray_Sound_Buffer {
     int samples_per_second;
@@ -341,8 +349,9 @@ main(int argv, char* argc[]) {
     //
     } else {
         // Failure ot get memory allocated for image
-        TraceLog(1, "Failure to allocate memory for offscreen buffer.");
+        TraceLog(LOG_VALUE, "Failure to allocate memory for offscreen buffer.");
     }
+    /*
     Image render_image = {0};
     render_image.data = MemAlloc(buffer.width * buffer.height * buffer.bytes_per_pixel);
     if (render_image.data) {
@@ -350,12 +359,16 @@ main(int argv, char* argc[]) {
     //
     } else {
         // Failure ot get memory allocated for image
-        TraceLog(1, "Failure to allocate memory for offscreen buffer.");
+        TraceLog(LOG_VALUE, "Failure to allocate memory for image buffer.");
     }
     render_image.width = buffer.width;
     render_image.height = buffer.height;
     render_image.mipmaps = 0;
     render_image.format = PIXELFORMAT_UNCOMPRESSED_R8G8B8A8;
+    */
+    Image render_image = GenImageColor(buffer.width, buffer.height, BLACK);
+    ImageFormat(&render_image, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);
+
     Texture2D render_texture = LoadTextureFromImage(render_image);
     UpdateTexture(render_texture, buffer.memory);
     /*
@@ -376,7 +389,7 @@ main(int argv, char* argc[]) {
     SaveFileText("test.txt", "adding this test\0");
     // TODO does this work as expected  
 
-    mac_LoadDllGameCode(&game_code,game_dll_full_path, temp_dll_full_path);
+    mac_LoadDllGameCode(&game_code, game_dll_full_path, temp_dll_full_path);
 
     //--------------------------------------------------------------------------------------
 
@@ -454,19 +467,16 @@ main(int argv, char* argc[]) {
         // TODO make sure the data is transfered properly
         winToRaylibPixelFormat(&buffer);
         UpdateTexture(render_texture, buffer.memory);
-        
 
         // 
         //----------------------------------------------------------------------------------
         
-         
         
         //----------------------------------------------------------------------------------
         
         // Sound
         //----------------------------------------------------------------------------------
         
-         
         
         //----------------------------------------------------------------------------------
         
@@ -478,7 +488,7 @@ main(int argv, char* argc[]) {
 
             ClearBackground(RAYWHITE);
 
-            DrawTexture(render_texture, 0, 0, BLUE);
+            DrawTexture(render_texture, 0, 0, BLACK);
             DrawCircleLines(400, 400, 100.0f, RED);
 
             DrawText(TextFormat("We need to make sure this works Trost with the most."), 10, 50, 10, MAROON);
