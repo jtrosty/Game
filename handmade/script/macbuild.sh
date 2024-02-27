@@ -2,7 +2,7 @@ set -xe
 
 WARNING_FLAGS="-Wall -Wextra -Wpedantic"
 LIBS="'pkg-config --libs raylib' -lglfw lm ldl lpthred"
-LINK_FLAGS="-framework OpenGL -framework OpenAL -framework IOKit -framework CoreVideo -framework Cocoa"
+LINK_FLAGS="-framework OpenGL -framework OpenAL -framework IOKit -framework CoreVideo -framework Cocoa -framework CoreAudio"
 MAC_LINK_FLAGS="-framework CoreVideo -framework IOKit -framework Cocoa -framework GLUT -framework OpenGL"
 COMPILATION_FLAGS="-std=c++17 -O0 -g -undefined dynamic_lookup"
 OUTPUT_DIR="build"

@@ -4,17 +4,18 @@
 // Bug with offset of pixel rel_colors, everythign got darker.
 //
 
+real32 DEBUG_FRAME_COUNT = 0.0;
+
 internal void gameOutputSound(Game_State* game_state, Game_Sound_Output_Buffer* sound_buffer, int tone_hz)
 {
-    i16 tone_volume = 1000;
-    int wave_period = sound_buffer->samples_per_second/tone_hz;
+    i16 tone_volume = 5000;
+    int wave_period = sound_buffer->samples_per_second / tone_hz;
 
     i16* sample_out = sound_buffer->samples;
     for(int sample_index = 0;
         sample_index < sound_buffer->sample_count;
         ++sample_index)
     {
-        // TODO(casey): Draw this out for people
 #if 1
         real32 sine_value = sinf(game_state->t_sine);
         i16 sample_value = (i16)(sine_value * tone_volume);
@@ -767,7 +768,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
         World* world = game_state->world; 
         initializeWorld(world, 1.4f);
 
-        game_state->tone_hz = 512;
+        game_state->tone_hz = 256;
+        game_state->t_sine = 1.0;
         game_state->player_speed_scaler = 10.0f;
 
         world->tile_side_in_pixels = 60;
@@ -1047,13 +1049,14 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
             c_alpha = 0.0f;
         }
 
+        //b g r a 
         real32 player_red = 0.0f;
         real32 player_green = 1.0f;
         real32 player_blue = 1.0f;
 
-        real32 wall_red = 1.0f;
-        real32 wall_green = 1.0f;
-        real32 wall_blue = 0.0f;
+        real32 wall_red = 0.6f;
+        real32 wall_green = 0.6f;
+        real32 wall_blue = 0.6f;
         real32 meters_to_pixels = (real32)world->tile_side_in_pixels / world->tile_side_in_meters;
 
         real32 player_ground_point_x = screen_center_x + (meters_to_pixels * high_entity->p.x); 
@@ -1096,7 +1099,10 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
 
     //RenderPlayer(buffer, input->mouse_x, input->mouse_y);
     // TODO: Debug stuff remove soon2.
-    drawRectangle(buffer, zero_vect, {40.0, 40.0}, 0.0f, 1.0f, 0.0f);
+    // DEBUG Rectangel
+    drawRectangle(buffer, zero_vect, {40.0, 40.0}, 0.0f, 0.0f, DEBUG_FRAME_COUNT);
+    DEBUG_FRAME_COUNT += .01;
+    
     drawBitmap(buffer, &game_state->DEBUG_bitmap, screen_center_x, screen_center_y, 0, 1.0f);
 
     for(int button_index = 0;

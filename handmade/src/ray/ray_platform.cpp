@@ -6,6 +6,11 @@
 #include <time.h>
 #include <sys/syslimits.h> //TODO: I only have this for max file path macro?
 #include <sys/stat.h>
+
+// DEBUG
+#include <string.h>         // Required for: memcpy()
+// DEBUG
+
 //
 //
 // 2. setup repaly 
@@ -45,18 +50,42 @@ typedef DEBUG_PLATFORM_WRITE_ENTIRE_FILE(debug_platform_write_entire_file);
 //**************************** DEBUG FILE SECTION******************************//
 
 static void winToRaylibPixelFormat(Game_Offscreen_Buffer* buffer) {
+        //b g r a 
+    //    a b g r
     // Raylib is    R8 G8 B8 A8
     // Windows is   A8 R8 G8 B8
-    int num_of_pixels = (buffer->height * buffer->width) / buffer->bytes_per_pixel;
+    // Comes in 
+    // 1  2  3  4
+    //       g
+    //       b 
+    int num_of_pixels = (buffer->height * buffer->width);
     u32* pixels = (u32*)buffer->memory;
     //u32 alpha_mask = 0x00FFFFFF;
     //u32 alpha_mask = 0xFFFFFF00;
-    u32 alpha_mask = 0x000000FF;
+    //u32 alpha_mask = 0x000000FF;
+    u32 first_mask = 0xff000000;
+    u32 secon_mask = 0x00ff0000;
+    u32 third_mask = 0x0000ff00;
+    u32 fourt_mask = 0x000000ff;
+
+    u32 alpha_mask = 0xFF000000;
     for (int i = 0; i < num_of_pixels; i++) {
         //*pixel = 0xFF0000ff + x_offset++;
-
+        
         u32 pixel = pixels[i];
-        pixels[i] = (pixel << 8) | alpha_mask;
+
+        u32 first_byte = (pixel & first_mask) >> 24;
+        u32 secon_byte = (pixel & secon_mask) >> 16;
+        u32 third_byte = (pixel & third_mask) >> 8; // g
+        u32 fourt_byte = (pixel & fourt_mask) >> 0;
+
+        pixels[i] = alpha_mask |
+                    (fourt_byte << 16) |
+                    (third_byte << 8) |
+                    (secon_byte << 0); 
+            
+
+        //pixels[i] = (pixel >> 8) | alpha_mask;
         // 0xFF000000 black
         // 0xFFFF0000 orange maybe red
         // 0x00FF0000 red
@@ -116,7 +145,7 @@ DEBUG_PLATFORM_READ_ENTIRE_FILE(debug_platformReadEntireFile) {
     }
     path_final[final_len] = '\0';
 
-    result.contents = (void*)LoadFileData(path_final, &result.contents_size);
+    result.contents = (void*)LoadFileData(path_final, (int*)&result.contents_size);
 
     return result;
 } 
@@ -133,6 +162,18 @@ DEBUG_PLATFORM_WRITE_ENTIRE_FILE(debug_platformWriteEntireFile) {
 struct Ray_Window_Dimension{
     int width;
     int height;
+};
+
+struct Ray_Sound_Output_Buffer
+{
+    i32 samples_per_second;
+    i32 sample_count;
+    i16 *samples;
+    u32 running_sample_index;
+    int bytes_per_sample;
+    u32 secondary_buffer_size;
+    u32 safety_bytes;
+    real32 t_sine;
 };
 
 
@@ -186,6 +227,8 @@ struct Ray_Game_Code {
 
     bool32 is_valid;
 };
+// Global
+Ray_Game_Code global_game_code = {0};
 
 long getLastWriteTime(char* game_lib_full_path) {
     time_t result = 0;
@@ -228,7 +271,7 @@ static void mac_LoadDllGameCode(Ray_Game_Code* game_code, const char* game_dll_f
     unsigned int loaded_dll_bytes_read = 0;
     
     // Load file data as byte array (read)
-    unsigned char* loaded_dll = LoadFileData(game_dll_full_path, &loaded_dll_bytes_read);       
+    unsigned char* loaded_dll = LoadFileData(game_dll_full_path, (int*)&loaded_dll_bytes_read);       
     if (!SaveFileData(temp_dll_full_path, loaded_dll, loaded_dll_bytes_read)) {
         printf("Failed to save temp dll\n");
         TraceLog(LOG_VALUE, "Failed to save teh temp dll.");
@@ -267,22 +310,44 @@ static void mac_unloadGameCode(Ray_Game_Code* game_code) {
     game_code->get_sound_samples_fn = 0;
 }
 
-/*
-#define GAME_UPDATE_AND_RENDER(name) void name(Thread_Context* thread, Game_Memory* memory, Game_Input* input, Game_Offscreen_Buffer* buffer)
+#define MAX_SAMPLES 1024
+#define MAX_SAMPLES_PER_UPDATE 8192
 
-#define GAME_GET_SOUND_SAMPLES(name) void name(Thread_Context* thread, Game_Memory* memory, Game_Sound_Output_Buffer* sound_buffer)
-*/
+// DEBUG ************************8
+// Cycles per second (hz)
+float frequency = 440.0f;
 
-struct Ray_Sound_Buffer {
-    int samples_per_second;
-    uint32 running_sample_index;
-    int bytes_per_sample;
-    int secondary_buffer_size;
-    int safety_bytes; // probably not needed
-    real32 t_sine;
-    // TODO: Should running sample index be in bytes as well
-    // TODO: Math gets simpler if we add a "bytes per second" field?
-};
+// Audio frequency, for smoothing
+float audioFrequency = 440.0f;
+
+// Previous value, used to test if sine needs to be rewritten, and to smoothly modulate frequency
+float oldFrequency = 1.0f;
+
+// Index for audio rendering
+float sineIdx = 0.0f;
+// DEBUG ************************8
+//
+struct Global_Audio_Callback {
+    Thread_Context* thread;
+    Game_Memory* game_memory;
+    Game_Sound_Output_Buffer* secondary_sound_buffer;
+
+} global_audio_callback;
+
+void DEBUG_AudioInputCallback(void *buffer, unsigned int frames)
+{
+    global_audio_callback.secondary_sound_buffer->sample_count = frames;
+    global_game_code.get_sound_samples_fn(global_audio_callback.thread, 
+                                          global_audio_callback.game_memory, 
+                                          global_audio_callback.secondary_sound_buffer);
+    short* d = (short*)buffer;
+    short* in = (short*)global_audio_callback.secondary_sound_buffer->samples;
+
+    for (int i = 0; i < frames; i++) {
+        *d++ = *in++;
+        *d++ = *in++;
+    }
+}
 
 int 
 main(int argv, char* argc[]) {
@@ -291,27 +356,33 @@ main(int argv, char* argc[]) {
     SetConfigFlags(FLAG_MSAA_4X_HINT);  // Set MSAA 4X hint before windows creation
 
     InitWindow(screenWidth, screenHeight, "raylib [core] example");
-    InitAudioDevice();
 
     SetTargetFPS(30);               // Set our game to run at 60 frames-per-second
     
     // Sound
-    Music music = {0};
-    AudioStream audio_stream = {0};
-    audio_stream.buffer = 0;
-    audio_stream.channels = 0;
-    audio_stream.processor = 0;
-    audio_stream.sampleRate = 0;
-    audio_stream.sampleSize = 0;
-    Sound sound = {0};
-    sound.stream = audio_stream;
-    sound.frameCount = {0};
-    Game_Sound_Output_Buffer sound_buffer = {};
-    sound_buffer.samples = 0;
-    sound_buffer.sample_count = 0;
-    sound_buffer.samples_per_second = 0;
+    InitAudioDevice();
+    SetAudioStreamBufferSizeDefault(MAX_SAMPLES_PER_UPDATE);
+
+    int samples_per_second = 44100; // 2 channels
+    int samples_per_frame = samples_per_second / 30;
+    AudioStream stream = LoadAudioStream(samples_per_second, 16, 2);
+    PlayAudioStream(stream);
+
+    short* write_buffer = (short*)MemAlloc(sizeof(short) * MAX_SAMPLES_PER_UPDATE);
+    SetAudioStreamVolume(stream, 1.0f);
+
+    Ray_Sound_Output_Buffer platform_sound_buffer = {};
+    platform_sound_buffer.samples_per_second = samples_per_second;
+    platform_sound_buffer.t_sine = 0.0f;
+    platform_sound_buffer.safety_bytes = 0;
+    platform_sound_buffer.bytes_per_sample = sizeof(short) * 2;
+
+    Game_Sound_Output_Buffer secondary_sound_buffer = {};
+    secondary_sound_buffer.sample_count = 0;
+    secondary_sound_buffer.samples_per_second = platform_sound_buffer.samples_per_second;
+    secondary_sound_buffer.samples = (short*)MemAlloc(secondary_sound_buffer.samples_per_second * 
+                                                      platform_sound_buffer.bytes_per_sample);
     
-    Ray_Game_Code game_code = {0};
     Ray_State ray_state = {0};
     Thread_Context thread = {0};
     thread.place_holder = 0;
@@ -351,32 +422,16 @@ main(int argv, char* argc[]) {
         // Failure ot get memory allocated for image
         TraceLog(LOG_VALUE, "Failure to allocate memory for offscreen buffer.");
     }
-    /*
-    Image render_image = {0};
-    render_image.data = MemAlloc(buffer.width * buffer.height * buffer.bytes_per_pixel);
-    if (render_image.data) {
-        // success
-    //
-    } else {
-        // Failure ot get memory allocated for image
-        TraceLog(LOG_VALUE, "Failure to allocate memory for image buffer.");
-    }
-    render_image.width = buffer.width;
-    render_image.height = buffer.height;
-    render_image.mipmaps = 0;
-    render_image.format = PIXELFORMAT_UNCOMPRESSED_R8G8B8A8;
-    */
-    Image render_image = GenImageColor(buffer.width, buffer.height, BLACK);
+    Image render_image = GenImageColor(buffer.width, buffer.height, RED);
     ImageFormat(&render_image, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);
 
     Texture2D render_texture = LoadTextureFromImage(render_image);
     UpdateTexture(render_texture, buffer.memory);
-    /*
-    render_texture.width = buffer.width;
-    render_texture.height = buffer.height;
-    render_texture.format  = PIXELFORMAT_UNCOMPRESSED_R8G8B8A8;
-    render_texture.mipmaps = 1;
-    */
+
+    global_audio_callback.secondary_sound_buffer = &secondary_sound_buffer;
+    global_audio_callback.thread = &thread;
+    global_audio_callback.game_memory = &game_memory;
+
 
     // Load game code
     //--------------------------------------------------------------------------------------
@@ -389,25 +444,33 @@ main(int argv, char* argc[]) {
     SaveFileText("test.txt", "adding this test\0");
     // TODO does this work as expected  
 
-    mac_LoadDllGameCode(&game_code, game_dll_full_path, temp_dll_full_path);
+    mac_LoadDllGameCode(&global_game_code, game_dll_full_path, temp_dll_full_path);
 
     //--------------------------------------------------------------------------------------
+    
+    SetAudioStreamCallback(stream, DEBUG_AudioInputCallback);
+    
+    // DEBUG
+
+    // DEBUG
 
     // Main game loop
     while (!WindowShouldClose())    // Detect window close button or ESC key
     {
         // Load Game Code
         //----------------------------------------------------------------------------------
-        if (mac_checkDllChanges(&game_code, game_dll_full_path)) {
-            mac_unloadGameCode(&game_code);
-            mac_LoadDllGameCode(&game_code, game_dll_full_path, temp_dll_full_path);
+        if (mac_checkDllChanges(&global_game_code, game_dll_full_path)) {
+            mac_unloadGameCode(&global_game_code);
+            mac_LoadDllGameCode(&global_game_code, game_dll_full_path, temp_dll_full_path);
         }
         //----------------------------------------------------------------------------------
         
         //Controller
         //----------------------------------------------------------------------------------
+        //TODO: Hard coded zero.
+        new_input->dt_for_frame = GetFrameTime();
         for (int controller_index = 0; controller_index < MAX_CONTROLLER_COUNT; controller_index++) {
-            if (IsGamepadAvailable(controller_index)) {
+            if (IsGamepadAvailable(0)) {
                 new_input->controllers[controller_index].is_connected = true;
                 new_input->controllers[controller_index].is_analog = true;
 
@@ -434,35 +497,37 @@ main(int argv, char* argc[]) {
                 new_input->controllers[controller_index].right_stick_average_y = (real32)GetGamepadAxisMovement(controller_index, GAMEPAD_AXIS_RIGHT_Y);
             }
             else {
-                new_input->controllers[controller_index].is_connected = true;
-                new_input->controllers[controller_index].is_analog = false;
+                new_input->controllers[0].is_connected = false;
+                new_input->controllers[0].is_analog = false;
 
-                new_input->controllers[controller_index].back.ended_down = IsKeyDown(KEY_B);
-                new_input->controllers[controller_index].start.ended_down = IsKeyDown(KEY_G);
+                new_input->controllers[0].back.ended_down = IsKeyDown(KEY_B);
+                new_input->controllers[0].start.ended_down = IsKeyDown(KEY_G);
 
-                new_input->controllers[controller_index].action_up.ended_down = IsKeyDown(KEY_Q);
-                new_input->controllers[controller_index].action_down.ended_down = IsKeyDown(KEY_E);
-                new_input->controllers[controller_index].action_left.ended_down = IsKeyDown(KEY_F);
-                new_input->controllers[controller_index].action_right.ended_down = IsKeyDown(KEY_R);
+                new_input->controllers[0].action_up.ended_down = IsKeyDown(KEY_Q);
+                new_input->controllers[0].action_down.ended_down = IsKeyDown(KEY_E);
+                new_input->controllers[0].action_left.ended_down = IsKeyDown(KEY_F);
+                new_input->controllers[0].action_right.ended_down = IsKeyDown(KEY_R);
 
-                new_input->controllers[controller_index].move_up.ended_down = IsKeyDown(KEY_UP);
-                new_input->controllers[controller_index].move_down.ended_down = IsKeyDown(KEY_DOWN);
-                new_input->controllers[controller_index].move_left.ended_down = IsKeyDown(KEY_LEFT);
-                new_input->controllers[controller_index].move_right.ended_down = IsKeyDown(KEY_RIGHT);
+                new_input->controllers[0].move_up.ended_down = IsKeyDown(KEY_W);
+                new_input->controllers[0].move_down.ended_down = IsKeyDown(KEY_S);
+                new_input->controllers[0].move_left.ended_down = IsKeyDown(KEY_A);
+                new_input->controllers[0].move_right.ended_down = IsKeyDown(KEY_D);
 
-                new_input->controllers[controller_index].left_shoulder.ended_down = IsKeyDown(KEY_X);
-                new_input->controllers[controller_index].right_shoulder.ended_down = IsKeyDown(KEY_Z);
+                new_input->controllers[0].left_shoulder.ended_down = IsKeyDown(KEY_X);
+                new_input->controllers[0].right_shoulder.ended_down = IsKeyDown(KEY_Z);
             }
         }
         //----------------------------------------------------------------------------------
         
         // Update
         //----------------------------------------------------------------------------------
-        if (game_code.get_sound_samples_fn) {
-            game_code.get_sound_samples_fn(&thread, &game_memory, &sound_buffer);
+        /*
+        if (global_game_code.get_sound_samples_fn) {
+            global_game_code.get_sound_samples_fn(&thread, &game_memory, &secondary_sound_buffer);
         }
-        if (game_code.update_and_render_fn) {
-            game_code.update_and_render_fn(&thread, &game_memory, new_input, &buffer);
+        */
+        if (global_game_code.update_and_render_fn) {
+            global_game_code.update_and_render_fn(&thread, &game_memory, new_input, &buffer);
         }
         // TODO make sure the data is transfered properly
         winToRaylibPixelFormat(&buffer);
@@ -471,13 +536,14 @@ main(int argv, char* argc[]) {
         // 
         //----------------------------------------------------------------------------------
         
-        
         //----------------------------------------------------------------------------------
         
         // Sound
         //----------------------------------------------------------------------------------
-        
-        
+        //if (IsAudioStreamProcessed(stream)) {
+        //    UpdateAudioStream(stream, &secondary_sound_buffer.samples, MAX_SAMPLES_PER_UPDATE);
+        //}
+
         //----------------------------------------------------------------------------------
         
         //----------------------------------------------------------------------------------
@@ -488,7 +554,7 @@ main(int argv, char* argc[]) {
 
             ClearBackground(RAYWHITE);
 
-            DrawTexture(render_texture, 0, 0, BLACK);
+            DrawTexture(render_texture, 0, 0, WHITE);
             DrawCircleLines(400, 400, 100.0f, RED);
 
             DrawText(TextFormat("We need to make sure this works Trost with the most."), 10, 50, 10, MAROON);
@@ -498,9 +564,14 @@ main(int argv, char* argc[]) {
     }
 
     // De-Initialization
+    MemFree(game_memory.permanent_storage);
+    MemFree(write_buffer);
+    MemFree(secondary_sound_buffer.samples);
+    MemFree(buffer.memory);
     
     UnloadImage(render_image);
     UnloadTexture(render_texture);
+    UnloadAudioStream(stream);
 
     CloseAudioDevice();
     CloseWindow();        // Close window and OpenGL context
