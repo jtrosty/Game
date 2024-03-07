@@ -16,7 +16,32 @@ union v2
     real32 E[2];
 };
 
-// TODO(casey): Consider v2 A = v2{5, 3}; ?
+union v3
+{
+    struct
+    {
+        real32 X, Y, Z;
+    };
+    struct
+    {
+        real32 R, G, B;
+    };
+    real32 E[3];
+};
+
+union v4
+{
+    struct
+    {
+        real32 X, Y, Z, W;
+    };
+    struct
+    {
+        real32 R, G, B, A;
+    };
+    real32 E[4];
+};
+
 inline v2
 V2(real32 X, real32 Y)
 {
@@ -24,6 +49,31 @@ V2(real32 X, real32 Y)
 
     Result.X = X;
     Result.Y = Y;
+
+    return(Result);
+}
+
+inline v3
+V3(real32 X, real32 Y, real32 Z)
+{
+    v3 Result;
+
+    Result.X = X;
+    Result.Y = Y;
+    Result.Z = Z;
+
+    return(Result);
+}
+
+inline v4
+V4(real32 X, real32 Y, real32 Z, real32 W)
+{
+    v4 Result;
+
+    Result.X = X;
+    Result.Y = Y;
+    Result.Z = Z;
+    Result.W = W;
 
     return(Result);
 }
@@ -120,11 +170,39 @@ LengthSq(v2 A)
     return(Result);
 }
 
+inline real32
+Length(v2 A)
+{
+    real32 Result = SquareRoot(LengthSq(A));
+    return(Result);
+}
+
 struct rectangle2
 {
     v2 Min;
     v2 Max;
 };
+
+inline v2
+GetMinCorner(rectangle2 Rect)
+{
+    v2 Result = Rect.Min;
+    return(Result);
+}
+
+inline v2
+GetMaxCorner(rectangle2 Rect)
+{
+    v2 Result = Rect.Max;
+    return(Result);
+}
+
+inline v2
+GetCenter(rectangle2 Rect)
+{
+    v2 Result = 0.5f*(Rect.Min + Rect.Max);
+    return(Result);
+}
 
 inline rectangle2
 RectMinMax(v2 Min, v2 Max)
@@ -155,6 +233,17 @@ RectCenterHalfDim(v2 Center, v2 HalfDim)
 
     Result.Min = Center - HalfDim;
     Result.Max = Center + HalfDim;
+
+    return(Result);
+}
+
+inline rectangle2
+AddRadiusTo(rectangle2 A, real32 RadiusW, real32 RadiusH)
+{
+    rectangle2 Result;
+
+    Result.Min = A.Min - V2(RadiusW, RadiusW);
+    Result.Max = A.Max + V2(RadiusH, RadiusH);
 
     return(Result);
 }

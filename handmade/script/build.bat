@@ -5,7 +5,8 @@ set PWD=%~dp0
 REM set CommonCompilerFlags=-WL -Od -MTd -nologo -Gm- -GR- -EHa- -Od -Oi -WX -W4 -wd4505 -wd4244 -wd4201 -wd4100 -wd4189 -DHANDMADE_INTERNAL=1 -DHANDMADE_SLOW=1 -DHANDMADE_WIN32=1 -FC -Z7 -Gs9999999
 
 set CommonCompilerFlags=-MTd -nologo -fp:fast -Gm- -GR- -EHa- -Od -Oi -WX -W4 -wd4244 -wd4201 -wd4100 -wd4189 -wd4505 -DHANDMADE_INTERNAL=1 -DHANDMADE_SLOW=1 -DHANDMADE_WIN32=1 -FC -Z7
-set CommonLinkerFlags= -incremental:no -opt:ref user32.lib gdi32.lib winmm.lib
+set CommonLinkerFlags= -incremental:no -opt:ref user32.lib gdi32.lib winmm.lib /DEBUG:FULL
+set lib_ldtk = "..\external\libcLDtk.lib"
 
 REM TODO - can we just build both with one exe?
 

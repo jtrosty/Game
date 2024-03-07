@@ -1,3 +1,19 @@
+/*
+#if !WIN_RAY
+#include <dlfcn.h>
+#include <sys/syslimits.h> //TODO: I only have this for max file path macro?
+#include <sys/stat.h>
+#include "../../external/raylib.h"
+#define RAY_STATE_FILE_NAME_COUNT PATH_MAX
+
+#else 
+#define RAY_STATE_FILE_NAME_COUNT 4096
+#include "C:/raylib/raylib/src/raylib.h"
+#endif
+*/
+
+//#include "../dynamic.h"
+=======
 // #include "../../external/raylib.h"
 #include "../core.h"
 #include <cstdio>
@@ -6,11 +22,7 @@
 #include <sys/stat.h>
 #include <sys/syslimits.h> //TODO: I only have this for max file path macro?
 #include <time.h>
-
-// DEBUG
-#include <string.h> // Required for: memcpy()
-// DEBUG
-
+  
 //
 //
 // 2. setup repaly
@@ -176,7 +188,6 @@ struct Ray_Sound_Output_Buffer {
   real32 t_sine;
 };
 
-#define RAY_STATE_FILE_NAME_COUNT PATH_MAX
 struct Ray_Replay_Buffer {
   void *file_handle;
   void *memory_map;
@@ -460,6 +471,41 @@ int main(int argv, char *argc[]) {
   mac_LoadDllGameCode(&global_game_code, game_dll_full_path,
                       temp_dll_full_path);
 
+  /*
+#if WIN_RAY
+    const char* game_dll_full_path = "w:/build/core.dll";
+    const char* temp_dll_full_path = "w:/build/temp_core.dll";
+
+#else 
+    const char* game_dll_full_path = "/Users/jonathantrost/Documents/code/warfare/Game/handmade/build/ray_core.dylib";
+    //const char* game_dll_full_path = "ray_core.dylib";
+    //const char* game_dll_full_path = "/Users/jonathantrost/Documents/code/warfare/Game/handmade/build/test.txt";
+    const char* temp_dll_full_path = "/Users/jonathantrost/Documents/code/warfare/Game/handmade/build/temp_ray_core.dylib";
+    
+    //char* hello = LoadFileText("../test.txt");
+    SaveFileText("/Users/jonathantrost/Documents/code/warfare/Game/handmade/build/test.txt", "adding this test\0");
+    // TODO does this work as expected  
+    game_code = *mac_LoadDllGameCode(game_dll_full_path, temp_dll_full_path);
+#endif
+
+    //--------------------------------------------------------------------------------------
+
+    // Main game loop
+    while (!WindowShouldClose())    // Detect window close button or ESC key
+    {
+        // Load Game Code
+        //----------------------------------------------------------------------------------
+#if WIN_RAY
+        long last_write_time = GetFileModTime(game_dll_full_path);
+
+#else
+        if (mac_checkDllChanges(&game_code, game_dll_full_path)) {
+            mac_unloadGameCode(&game_code);
+            game_code = *mac_LoadDllGameCode(game_dll_full_path, temp_dll_full_path);
+        }
+#endif
+*/
+  
   //--------------------------------------------------------------------------------------
 
   SetAudioStreamCallback(stream, DEBUG_AudioInputCallback);
@@ -599,7 +645,6 @@ int main(int argv, char *argc[]) {
     BeginDrawing();
 
     ClearBackground(RAYWHITE);
-
     DrawTexture(render_texture, 0, 0, WHITE);
     DrawCircleLines(400, 400, 100.0f, RED);
 

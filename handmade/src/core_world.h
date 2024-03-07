@@ -1,9 +1,8 @@
-
-#if !defined(ERROR_REMOVER)
-#include "core.h"
-#endif
-
 #if !defined(CORE_WORLD_H)
+
+// #if !defined(ERROR_REMOVER)
+// #include "core.h"
+// #endif
 
 struct World_Entity_Block {
   u32 entity_count;

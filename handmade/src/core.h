@@ -1,7 +1,9 @@
+#if !defined(CORE_H)
+
+// #include <atomic>
 #include <math.h>
 #include <stdint.h>
-
-#define ERROR_REMOVER
+// #include <type_traits>
 
 #define internal static
 #define local_persist static
@@ -69,9 +71,10 @@ struct Memory_Arena {
   memory_index used;
 };
 
-static void initializeArena(Memory_Arena *arena, memory_index size, u8 *base) {
+static void initializeArena(Memory_Arena *arena, memory_index size,
+                            void *base) {
   arena->size = size;
-  arena->base = base;
+  arena->base = (u8 *)base;
   arena->used = 0;
 }
 
@@ -87,9 +90,19 @@ static void *pushSize_(Memory_Arena *arena, memory_index size) {
   return result;
 }
 
+#define zeroStruct(instance) zeroSize(sizeof(instance), &(instance))
+static void zeroSize(memory_index size, void *ptr) {
+  // TODO (Jon): Check this for performance
+  u8 *byte = (u8 *)ptr;
+  while (size--) {
+    *byte++ = 0;
+  }
+}
+
 #include "core_intrinsics.h"
 #include "core_math.h"
 #include "core_world.h"
+#include "sim_region.h"
 
 typedef struct Debug_Read_File_Result {
   uint32 contents_size;
@@ -232,15 +245,6 @@ struct Hero_Bitmaps {
   Loaded_Bitmap torso;
 };
 
-enum Entity_Type {
-  entityType_Null,
-
-  entityType_Hero,
-  entityType_Wall,
-  entityType_Familiar,
-  entityType_Monster,
-  entityType_Sword,
-};
 struct High_Entity {
   v2 p; // Relative to the camera
   v2 dp;
@@ -255,21 +259,15 @@ struct High_Entity {
 };
 
 struct Low_Entity {
-  Entity_Type type;
   World_Position p;
-  real32 width;
-  real32 height;
-
-  // NOTE: This is for stairs
-  bool32 colliders;
-  i32 d_abs_tile_z;
-  u32 high_entity_index;
+  Sim_Entity sim;
 };
 
-struct Entity {
-  u32 low_index;
-  Low_Entity *low;
-  High_Entity *high;
+struct Controlled_Hero {
+  u32 entity_index;
+
+  v2 ddp;
+  real32 dz;
 };
 
 struct Game_State {
@@ -277,13 +275,10 @@ struct Game_State {
   Memory_Arena world_arena;
 
   u32 camera_following_entity_index;
-  u32 player_index_for_controllers[ArrayCount(((Game_Input *)0)->controllers)];
+  Controlled_Hero controlled_heroes[ArrayCount(((Game_Input *)0)->controllers)];
 
   u32 low_entity_count;
   Low_Entity low_entities[10000];
-
-  u32 high_entity_count;
-  High_Entity high_entities[256];
 
   Loaded_Bitmap backdrop;
   Loaded_Bitmap shadow;
@@ -321,3 +316,15 @@ struct Entity_Visible_Piece_Group {
   u32 piece_count;
   Entity_Visible_Piece pieces[32];
 };
+
+inline Low_Entity *getLowEntity(Game_State *game_state, u32 index) {
+  Low_Entity *entitiy = 0;
+
+  if ((index > 0) && (index < game_state->low_entity_count)) {
+    entitiy = game_state->low_entities + index;
+  }
+  return entitiy;
+}
+
+#define CORE_H
+#endif

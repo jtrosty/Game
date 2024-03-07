@@ -1,4 +1,3 @@
-#pragma once
 #include "core_world.h"
 #if !defined(ERROR_REMOVER)
 #include "core.h"
@@ -26,21 +25,21 @@ inline bool32 worldPosIsValid(World_Position p) {
   return result;
 }
 
-inline bool32 isCanonical(World *world, real32 tile_rel) {
+inline bool32 isCanonical(World* world, real32 tile_rel) {
   bool32 result = ((tile_rel >= -0.5f * world->chunk_side_in_meters) &&
                    (tile_rel <= 0.5f * world->chunk_side_in_meters));
 
   return result;
 }
 
-inline bool32 isCanonical(World *world, v2 offset) {
+inline bool32 isCanonical(World* world, v2 offset) {
   bool32 result = isCanonical(world, offset.x) && isCanonical(world, offset.y);
 
   return result;
 }
 
-inline bool32 areInSameChunk(World *world, World_Position *a,
-                             World_Position *b) {
+inline bool32 areInSameChunk(World* world, World_Position* a,
+                             World_Position* b) {
   Assert(isCanonical(world, a->offset));
   Assert(isCanonical(world, b->offset));
 
@@ -50,9 +49,9 @@ inline bool32 areInSameChunk(World *world, World_Position *a,
   return result;
 }
 
-inline World_Chunk *getWorldChunk(World *world, i32 chunk_x, i32 chunk_y,
-                                  i32 chunk_z, Memory_Arena *arena = 0) {
 
+inline World_Chunk* getWorldChunk(World* world, i32 chunk_x, i32 chunk_y,
+                                  i32 chunk_z, Memory_Arena* arena = 0) {
   Assert(chunk_x > -TILE_CHUNK_SAFE_MARGIN);
   Assert(chunk_y > -TILE_CHUNK_SAFE_MARGIN);
   Assert(chunk_z > -TILE_CHUNK_SAFE_MARGIN);
@@ -65,7 +64,7 @@ inline World_Chunk *getWorldChunk(World *world, i32 chunk_x, i32 chunk_y,
 
   Assert(hash_slot < ArrayCount(world->chunk_hash));
 
-  World_Chunk *chunk = world->chunk_hash + hash_slot;
+  World_Chunk* chunk = world->chunk_hash + hash_slot;
 
   do {
     if ((chunk_x == chunk->chunk_x) && (chunk_y == chunk->chunk_y) &&
@@ -114,7 +113,7 @@ GetChunkPositionFor(world *World, uint32 AbsTileX, uint32 AbsTileY, uint32 AbsTi
     world->chunk_dim = (1 << world->chunk_shift);
 #endif
 
-static void initializeWorld(World *world, real32 tile_side_in_meters) {
+static void initializeWorld(World* world, real32 tile_side_in_meters) {
   world->tile_side_in_meters = tile_side_in_meters;
   world->chunk_side_in_meters = (real32)TILES_PER_CHUNK * tile_side_in_meters;
   world->first_free = 0;
@@ -126,8 +125,8 @@ static void initializeWorld(World *world, real32 tile_side_in_meters) {
   }
 }
 
-inline void recanonicalizeCoordinate(World *world, i32 *tile,
-                                     real32 *tile_rel) {
+inline void recanonicalizeCoordinate(World* world, i32* tile,
+                                     real32* tile_rel) {
   // Assume tile_map is terrodial. tile_map
   // TODO(casey): Need to do something that doesn't use the divide/multiply
   // method for recanonicalizing because this can end up rounding back on to the
@@ -148,7 +147,7 @@ inline void recanonicalizeCoordinate(World *world, i32 *tile,
   Assert(isCanonical(world, *tile_rel));
 }
 
-static World_Position mapIntoChunkSpace(World *world, World_Position base_pos,
+static World_Position mapIntoChunkSpace(World* world, World_Position base_pos,
                                         v2 offset) {
   World_Position result = base_pos;
 
@@ -159,7 +158,7 @@ static World_Position mapIntoChunkSpace(World *world, World_Position base_pos,
   return result;
 }
 
-inline World_Position chunkPositionFromTilePosition(World *world,
+inline World_Position chunkPositionFromTilePosition(World* world,
                                                     i32 abs_tile_x,
                                                     i32 abs_tile_y,
                                                     i32 abs_tile_z) {
@@ -200,8 +199,8 @@ static bool32 areOnSameTile(World_Position* a, World_Position* b) {
 }
 */
 
-inline World_Difference worldSubtract(World *world, World_Position *a,
-                                      World_Position *b) {
+inline World_Difference worldSubtract(World* world, World_Position* a,
+                                      World_Position* b) {
   World_Difference result;
   v2 diff_tile_xy = {(real32)a->chunk_x - (real32)b->chunk_x,
                      (real32)a->chunk_y - (real32)b->chunk_y};
@@ -237,10 +236,10 @@ inline World_Position centeredChunkPoint(u32 chunk_x, u32 chunk_y,
 }
 
 #define InvalidCodePath Assert(!"InvalidCodePath");
-inline void changeEntityLocationRaw(Memory_Arena *arena, World *world,
-                                    u32 low_entity_index, World_Position *old_p,
-                                    World_Position *new_p) {
-  // TODO(casey): If this moves an entity into the camera bounds, should it
+inline void changeEntityLocationRaw(Memory_Arena* arena, World* world,
+                                    u32 low_entity_index, World_Position* old_p,
+                                    World_Position* new_p) {
+  // TODO: (Jon) If this moves an entity into the camera bounds, should it
   // automatically go into the high set immediately? If it moves _out_ of the
   // camera bounds, should it be removed from the high set immediately?
 
@@ -248,19 +247,19 @@ inline void changeEntityLocationRaw(Memory_Arena *arena, World *world,
   Assert(!new_p || isValid(*new_p));
 
   if (old_p && new_p && areInSameChunk(world, old_p, new_p)) {
-
+    // NOTE: Leave entity where it is
   } else {
     if (old_p) {
 
-      World_Chunk *chunk = getWorldChunk(world, new_p->chunk_x, new_p->chunk_y,
+      World_Chunk* chunk = getWorldChunk(world, new_p->chunk_x, new_p->chunk_y,
                                          new_p->chunk_z, arena);
       Assert(chunk);
 
       if (chunk) {
         bool32 not_found = true;
-        World_Entity_Block *first_block = &chunk->first_block;
+        World_Entity_Block* first_block = &chunk->first_block;
 
-        for (World_Entity_Block *block = first_block; block && not_found;
+        for (World_Entity_Block* block = first_block; block && not_found;
              block = block->next) {
 
           for (u32 index = 0; (index < block->entity_count) && not_found;
@@ -274,9 +273,8 @@ inline void changeEntityLocationRaw(Memory_Arena *arena, World *world,
               if (first_block->entity_count == 0) {
 
                 if (first_block->next) {
-                  World_Entity_Block *next_block = first_block->next;
+                  World_Entity_Block* next_block = first_block->next;
                   *first_block = *next_block;
-
                   next_block->next = world->first_free;
                   world->first_free = next_block;
                 }
@@ -289,13 +287,13 @@ inline void changeEntityLocationRaw(Memory_Arena *arena, World *world,
     }
 
     if (new_p) {
-      World_Chunk *chunk = getWorldChunk(world, new_p->chunk_x, new_p->chunk_y,
+      World_Chunk* chunk = getWorldChunk(world, new_p->chunk_x, new_p->chunk_y,
                                          new_p->chunk_z, arena);
       Assert(chunk);
 
-      World_Entity_Block *block = &chunk->first_block;
+      World_Entity_Block* block = &chunk->first_block;
       if (block->entity_count == ArrayCount(block->low_entity_index)) {
-        World_Entity_Block *old_block = world->first_free;
+        World_Entity_Block* old_block = world->first_free;
         if (old_block) {
           world->first_free = old_block->next;
         } else {
@@ -311,11 +309,22 @@ inline void changeEntityLocationRaw(Memory_Arena *arena, World *world,
   }
 }
 
-static void changeEntityLocation(Memory_Arena *arena, World *world,
-                                 u32 low_entity_index, Low_Entity *low_entity,
-                                 World_Position *old_p, World_Position *new_p) {
+static void changeEntityLocation(Memory_Arena* arena, World* world,
+                                 u32 low_entity_index, Low_Entity* low_entity,
+                                 World_Position new_p_init) {
+  World_Position* old_p = 0;
+  World_Position* new_p = 0;
+  if (!isSet(&low_entity->sim, Entity_Flag_Nonspatial) &&
+      isValid(low_entity->p)) {
+    old_p = &low_entity->p;
+  }
+
+  if (isValid(new_p_init)) {
+    new_p = &new_p_init;
+  }
 
   changeEntityLocationRaw(arena, world, low_entity_index, old_p, new_p);
+
   if (new_p) {
     low_entity->p = *new_p;
   } else {
