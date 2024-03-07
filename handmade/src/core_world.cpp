@@ -49,9 +49,9 @@ inline bool32 areInSameChunk(World* world, World_Position* a,
   return result;
 }
 
+
 inline World_Chunk* getWorldChunk(World* world, i32 chunk_x, i32 chunk_y,
                                   i32 chunk_z, Memory_Arena* arena = 0) {
-
   Assert(chunk_x > -TILE_CHUNK_SAFE_MARGIN);
   Assert(chunk_y > -TILE_CHUNK_SAFE_MARGIN);
   Assert(chunk_z > -TILE_CHUNK_SAFE_MARGIN);
@@ -275,7 +275,6 @@ inline void changeEntityLocationRaw(Memory_Arena* arena, World* world,
                 if (first_block->next) {
                   World_Entity_Block* next_block = first_block->next;
                   *first_block = *next_block;
-
                   next_block->next = world->first_free;
                   world->first_free = next_block;
                 }

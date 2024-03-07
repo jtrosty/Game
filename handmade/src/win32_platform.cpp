@@ -402,7 +402,6 @@ static void win32_fillSoundBuffer(Win32_Sound_Output* sound_output, DWORD byte_t
 
             ++sound_output->running_sample_index;
         }
-        DWORD region_2_sample_count = region_2_size / sound_output->bytes_per_sample;
         dest_sample = (i16*)region_2;
         for (DWORD sample_index = 0; sample_index < region_2_sample_count; ++sample_index) {
             *dest_sample++ = *source_sample++;
@@ -635,7 +634,7 @@ static void DEBUG_output_sound(Game_State* game_state, Game_Sound_Output_Buffer*
 
     i16* sample_out = sound_buffer->samples;
     for (int sample_index = 0; sample_index < sound_buffer->sample_count; ++sample_index) {
-        real32 sine_value = sinf(game_state->t_sine);
+        real32 sine_value = core_sin(game_state->t_sine);
         i16 sample_value = (i16)(sine_value * tone_volume);
         *sample_out++ = sample_value;
         *sample_out++ = sample_value;
@@ -922,6 +921,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
         global_secondary_buffer->GetCurrentPosition(&play_cursor, &write_cursor);
         DWORD unwrapped_write = write_cursor;
         if (unwrapped_write < play_cursor) {
+//kk
             unwrapped_write += sound_output.secondary_buffer_size;
         }
         DWORD bytes_between_cursors = unwrapped_write - play_cursor;

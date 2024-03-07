@@ -41,6 +41,7 @@ internal void renderWeirdGradient(Game_Offscreen_Buffer* buffer,
   uint8* rel_row = (uint8*)buffer->memory;
   for (int y = 0; y < buffer->height; ++y) {
     uint32* pixel = (uint32*)rel_row;
+
     for (int x = 0; x < buffer->width; ++x) {
       uint8 blue = (uint8)(x + blue_offset);
       uint8 green = (uint8)(y + green_offset);
@@ -78,15 +79,19 @@ struct Bitmap_Header {
 #pragma pack(pop)
 
 static Loaded_Bitmap
+
 DEBUG_loadBMP(debug_platform_read_entire_file* read_entire_file,
               Thread_Context* thread, char* filename) {
+
   // BB GG RR AA, bottom up, start with bottomr row first
   Loaded_Bitmap result = {};
   Debug_Read_File_Result read_result = read_entire_file(thread, filename);
   if (read_result.contents_size != 0) {
+
     Bitmap_Header* header = (Bitmap_Header*)read_result.contents;
     u32* pixels = (u32*)((u8*)read_result.contents + header->bitmap_offset);
     result.pixels = (u32*)((u8*)read_result.contents + header->bitmap_offset);
+
     result.width = header->width;
     result.height = header->height;
 
@@ -121,6 +126,7 @@ DEBUG_loadBMP(debug_platform_read_entire_file* read_entire_file,
     i32 alpha_shift = 24 - (i32)alpha_scan.index;
 
     u32* source_dest = pixels;
+
     for (i32 Y = 0; Y < header->height; ++Y) {
       for (i32 X = 0; X < header->width; ++X) {
         u32 C = *source_dest;
@@ -138,6 +144,7 @@ DEBUG_loadBMP(debug_platform_read_entire_file* read_entire_file,
 }
 
 static void drawBitmap(Game_Offscreen_Buffer* buffer, Loaded_Bitmap* bitmap,
+
                        real32 real_x, real32 real_y, i32 align_x = 0,
                        i32 align_y = 0, real32 cAlpha = 1.0f) {
   real_x -= (real32)align_x;
@@ -175,6 +182,7 @@ static void drawBitmap(Game_Offscreen_Buffer* buffer, Loaded_Bitmap* bitmap,
   for (int y = min_y; y < max_y; ++y) {
     u32* dest = (u32*)dest_row;
     u32* source = source_row;
+
     for (int x = min_x; x < max_x; ++x) {
       real32 A = (real32)((*source >> 24) & 0xFF) / 255.0f;
       A *= cAlpha;
@@ -230,6 +238,7 @@ static void drawRectangle(Game_Offscreen_Buffer* buffer, v2 v_min, v2 v_max,
                  min_y * buffer->pitch);
   for (int y = min_y; y < max_y; ++y) {
     u32* pixel = (u32*)rel_row;
+
     for (int x = min_x; x < max_x; ++x) {
       *pixel++ = rel_color;
     }
@@ -269,6 +278,7 @@ inline void pushPiece(Entity_Visible_Piece_Group* group, Loaded_Bitmap* bitmap,
 }
 
 inline void pushBitmap(Entity_Visible_Piece_Group* group, Loaded_Bitmap* bitmap,
+
                        v2 offset, real32 offset_z, v2 align,
                        real32 alpha = 1.0f, real32 entity_z_c = 1.0f) {
   pushPiece(group, bitmap, offset, offset_z, align, V2(0, 0),
@@ -276,6 +286,7 @@ inline void pushBitmap(Entity_Visible_Piece_Group* group, Loaded_Bitmap* bitmap,
 }
 
 inline void pushRect(Entity_Visible_Piece_Group* group, v2 offset,
+
                      real32 offset_z, v2 dim, v4 color,
                      real32 entity_z_c = 1.0f) {
   pushPiece(group, 0, offset, offset_z, V2(0, 0), dim, color, entity_z_c);
@@ -297,35 +308,34 @@ inline Entity entityFromHighIndex(Game_State* game_state, u32 high_entity_index)
 inline High_Entity* makeEntityHighFrequency(Game_State* game_state, Low_Entity*
 entity_low, u32 low_index, v2 camera_space_p) { High_Entity* entity_high = 0;
 
-    Assert(entity_low->high_entity_index == 0);
+  Assert(entity_low->high_entity_index == 0);
 
-    if (entity_low->high_entity_index == 0) {
-        entity_high = game_state->high_entities + entity_low->high_entity_index;
+  if (entity_low->high_entity_index == 0) {
+    entity_high = game_state->high_entities + entity_low->high_entity_index;
 
         if (game_state->high_entity_count <
 ArrayCount(game_state->high_entities)) { u32 high_index =
 game_state->high_entity_count++; entity_high = game_state->high_entities +
 high_index;
 
-            entity_high->p = camera_space_p;
-            entity_high->dp = V2(0, 0);
-            entity_high->abs_tile_z = entity_low->p.chunk_z;
-            entity_high->facingDirection = 0;
-            entity_high->low_entity_index = low_index;
+      entity_high->p = camera_space_p;
+      entity_high->dp = V2(0, 0);
+      entity_high->abs_tile_z = entity_low->p.chunk_z;
+      entity_high->facingDirection = 0;
+      entity_high->low_entity_index = low_index;
 
-            entity_low->high_entity_index = high_index;
-        }
-        else {
-            Assert(false);
-        }
+      entity_low->high_entity_index = high_index;
+    } else {
+      Assert(false);
     }
-    return entity_high;
+  }
+  return entity_high;
 }
 
 inline High_Entity* makeEntityHighFrequency(Game_State* game_state, u32
 low_index) { High_Entity* entity_high = 0;
 
-    Low_Entity* entity_low = game_state->low_entities + low_index;
+  Low_Entity *entity_low = game_state->low_entities + low_index;
 
     if(entity_low->high_entity_index) {
         entity_high = game_state->high_entities + entity_low->high_entity_index;
@@ -336,33 +346,32 @@ low_index) { High_Entity* entity_high = 0;
 camera_space_p); } return entity_high;
 }
 
+inline Entity forceEntityIntoHigh(Game_State *game_state, u32 low_index) {
+  Entity result = {};
 
-inline Entity forceEntityIntoHigh(Game_State* game_state, u32 low_index) {
-    Entity result = {};
+  if ((low_index > 0) && (low_index < game_state->low_entity_count)) {
+    result.low_index = low_index;
+    result.low = game_state->low_entities + low_index;
+    result.high = makeEntityHighFrequency(game_state, low_index);
+  }
 
-    if ((low_index > 0) && (low_index < game_state->low_entity_count)) {
-        result.low_index = low_index;
-        result.low = game_state->low_entities + low_index;
-        result.high = makeEntityHighFrequency(game_state, low_index);
-    }
-
-    return result;
+  return result;
 }
 
-inline Entity getHighEntity(Game_State* game_state, u32 low_index) {
-    Entity result = {};
+inline Entity getHighEntity(Game_State *game_state, u32 low_index) {
+  Entity result = {};
 
-    if((low_index > 0) && (low_index < game_state->low_entity_count)) {
-        result.low_index = low_index;
-        result.low = game_state->low_entities + low_index;
-        result.high = makeEntityHighFrequency(game_state, low_index);
-    }
-    return result;
+  if ((low_index > 0) && (low_index < game_state->low_entity_count)) {
+    result.low_index = low_index;
+    result.low = game_state->low_entities + low_index;
+    result.high = makeEntityHighFrequency(game_state, low_index);
+  }
+  return result;
 }
 
-inline void makeEntityLowFrequency(Game_State* game_state, u32 low_index) {
-    Low_Entity* entity_low = &game_state->low_entities[low_index];
-    u32 high_index = entity_low->high_entity_index;
+inline void makeEntityLowFrequency(Game_State *game_state, u32 low_index) {
+  Low_Entity *entity_low = &game_state->low_entities[low_index];
+  u32 high_index = entity_low->high_entity_index;
 
     if(high_index) {
         u32 last_high_index = game_state->high_entity_count - 1;
@@ -380,6 +389,9 @@ high_index;
        --game_state->high_entity_count;
         entity_low->high_entity_index = 0;
     }
+    --game_state->high_entity_count;
+    entity_low->high_entity_index = 0;
+  }
 }
 
 inline bool32 validateEntityPairs(Game_State* game_state) {
@@ -410,6 +422,8 @@ high->low_entity_index;
         }
         int dummyLine = 5;
     }
+    int dummyLine = 5;
+  }
 }
 */
 
@@ -539,8 +553,11 @@ entity_index; if (low_entity->high_entity_index == 0) { if
                 (low_entity->p.abs_tile_y >= min_tile_y) &&
                 (low_entity->p.abs_tile_y <= max_tile_y)) {
                 makeEntityHighFrequency(game_state, entity_index);
+
             }
+          }
         }
+      }
     }
 }
     */
@@ -559,6 +576,7 @@ static Add_Low_Entity_Result addPlayer(Game_State* game_state) {
   }
 
   return entity;
+
 }
 
 extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
@@ -572,6 +590,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
 
   Game_State* game_state = (Game_State*)memory->permanent_storage;
 
+
   if (!memory->is_initialized) {
     // TODO: Remove?
 
@@ -583,6 +602,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
     p_zero.chunk_y = 1;
     p_zero.chunk_z = 0;
     addLowEntity(game_state, entityType_Null, nullPosition());
+
 
     game_state->backdrop = DEBUG_loadBMP(*memory->DEBUG_platformReadEntireFile,
                                          thread, "../test/test_background.bmp");
@@ -646,7 +666,6 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
                       "../test/test_hero_front_torso.bmp");
     hero_bitmaps[3].align_x = 72;
     hero_bitmaps[3].align_y = 182;
-
     /*
     Debug_Read_File_Result file = memory->DEBUG_platformReadEntireFile(thread,
     filename); if(file.contents)
@@ -665,6 +684,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
     initializeWorld(world, 1.4f);
 
     game_state->tone_hz = 512;
+
     game_state->player_speed_scaler = 10.0f;
 
     world->tile_side_in_pixels = 60;
@@ -837,7 +857,6 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
   //  Render
   //
   //
-
   // THis is the old tilemap system
 #if 0
 #endif
