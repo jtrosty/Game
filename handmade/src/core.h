@@ -1,5 +1,7 @@
 #if !defined(CORE_H)
 
+#define UNITY_BUILD_ERROR_REMOVER
+
 // #include <atomic>
 #include <math.h>
 #include <stdint.h>
@@ -39,7 +41,7 @@ typedef size_t memory_index;
 // TODO(casey): Complete assertion macro - don't worry everyone!
 #define Assert(Expression)                                                     \
   if (!(Expression)) {                                                         \
-    *(int *)0 = 0;                                                             \
+    *(int*)0 = 0;                                                              \
   }
 #else
 #define Assert(Expression)
@@ -67,33 +69,33 @@ struct Thread_Context {
 
 struct Memory_Arena {
   memory_index size;
-  u8 *base;
+  u8* base;
   memory_index used;
 };
 
-static void initializeArena(Memory_Arena *arena, memory_index size,
-                            void *base) {
+static void initializeArena(Memory_Arena* arena, memory_index size,
+                            void* base) {
   arena->size = size;
-  arena->base = (u8 *)base;
+  arena->base = (u8*)base;
   arena->used = 0;
 }
 
-#define pushStruct(arena, type) (type *)pushSize_(arena, sizeof(type))
+#define pushStruct(arena, type) (type*)pushSize_(arena, sizeof(type))
 #define pushArray(arena, count, type)                                          \
-  (type *)pushSize_(arena, (count) * sizeof(type))
-static void *pushSize_(Memory_Arena *arena, memory_index size) {
+  (type*)pushSize_(arena, (count) * sizeof(type))
+static void* pushSize_(Memory_Arena* arena, memory_index size) {
   // All memory when initial gained from valloc is cleared to zero
   Assert((arena->used + size) <= arena->size);
-  void *result = arena->base + arena->used;
+  void* result = arena->base + arena->used;
   arena->used += size;
 
   return result;
 }
 
 #define zeroStruct(instance) zeroSize(sizeof(instance), &(instance))
-static void zeroSize(memory_index size, void *ptr) {
+static void zeroSize(memory_index size, void* ptr) {
   // TODO (Jon): Check this for performance
-  u8 *byte = (u8 *)ptr;
+  u8* byte = (u8*)ptr;
   while (size--) {
     *byte++ = 0;
   }
@@ -106,20 +108,20 @@ static void zeroSize(memory_index size, void *ptr) {
 
 typedef struct Debug_Read_File_Result {
   uint32 contents_size;
-  void *contents;
+  void* contents;
 } Debug_Read_File_Result;
 
 #define DEBUG_PLATFORM_FREE_FILE_MEMORY(name)                                  \
-  void name(Thread_Context *thread, void *memory)
+  void name(Thread_Context* thread, void* memory)
 typedef DEBUG_PLATFORM_FREE_FILE_MEMORY(debug_platform_free_file_memory);
 
 #define DEBUG_PLATFORM_READ_ENTIRE_FILE(name)                                  \
-  Debug_Read_File_Result name(Thread_Context *Thread, char *filename)
+  Debug_Read_File_Result name(Thread_Context* Thread, char* filename)
 typedef DEBUG_PLATFORM_READ_ENTIRE_FILE(debug_platform_read_entire_file);
 
 #define DEBUG_PLATFORM_WRITE_ENTIRE_FILE(name)                                 \
-  bool32 name(Thread_Context *thread, char *filename, uint32 memory_size,      \
-              void *memory)
+  bool32 name(Thread_Context* thread, char* filename, uint32 memory_size,      \
+              void* memory)
 typedef DEBUG_PLATFORM_WRITE_ENTIRE_FILE(debug_platform_write_entire_file);
 
 inline u32 safeTruncateU64(u64 value) {
@@ -130,7 +132,7 @@ inline u32 safeTruncateU64(u64 value) {
 
 struct Game_Offscreen_Buffer {
   // NOTE(casey): Pixels are alwasy 32-bits wide, Memory Order BB GG RR XX
-  void *memory;
+  void* memory;
   int width;
   int height;
   int pitch;
@@ -140,7 +142,7 @@ struct Game_Offscreen_Buffer {
 struct Game_Sound_Output_Buffer {
   int samples_per_second;
   int sample_count;
-  i16 *samples;
+  i16* samples;
 };
 
 struct Game_Button_State {
@@ -192,11 +194,11 @@ struct Game_Input {
   Game_Controller_Input controllers[5];
 };
 
-inline Game_Controller_Input *getController(Game_Input *input,
+inline Game_Controller_Input* getController(Game_Input* input,
                                             int unsigned controller_index) {
   Assert(controller_index < ArrayCount(input->controllers));
 
-  Game_Controller_Input *result = &input->controllers[controller_index];
+  Game_Controller_Input* result = &input->controllers[controller_index];
   return (result);
 }
 
@@ -205,21 +207,21 @@ struct Game_Memory {
   bool32 is_initialized;
 
   u64 permanent_storage_size;
-  void *permanent_storage; // NOTE(casey): REQUIRED to be cleared to zero at
+  void* permanent_storage; // NOTE(casey): REQUIRED to be cleared to zero at
                            // startup
 
   u64 transient_storage_size;
-  void *transient_storage; // NOTE(casey): REQUIRED to be cleared to zero at
+  void* transient_storage; // NOTE(casey): REQUIRED to be cleared to zero at
                            // startup
 
-  debug_platform_free_file_memory *DEBUG_platformFreeFileMemory;
-  debug_platform_read_entire_file *DEBUG_platformReadEntireFile;
-  debug_platform_write_entire_file *DEBUG_platformWriteEntireFile;
+  debug_platform_free_file_memory* DEBUG_platformFreeFileMemory;
+  debug_platform_read_entire_file* DEBUG_platformReadEntireFile;
+  debug_platform_write_entire_file* DEBUG_platformWriteEntireFile;
 };
 
 #define GAME_UPDATE_AND_RENDER(name)                                           \
-  void name(Thread_Context *thread, Game_Memory *memory, Game_Input *input,    \
-            Game_Offscreen_Buffer *buffer)
+  void name(Thread_Context* thread, Game_Memory* memory, Game_Input* input,    \
+            Game_Offscreen_Buffer* buffer)
 typedef GAME_UPDATE_AND_RENDER(game_update_and_render);
 
 // NOTE(casey): At the moment, this has to be a very fast function, it cannot be
@@ -227,12 +229,12 @@ typedef GAME_UPDATE_AND_RENDER(game_update_and_render);
 // TODO(casey): Reduce the pressure on this function's performance by measuring
 // it or asking about it, etc.
 #define GAME_GET_SOUND_SAMPLES(name)                                           \
-  void name(Thread_Context *thread, Game_Memory *memory,                       \
-            Game_Sound_Output_Buffer *sound_buffer)
+  void name(Thread_Context* thread, Game_Memory* memory,                       \
+            Game_Sound_Output_Buffer* sound_buffer)
 typedef GAME_GET_SOUND_SAMPLES(game_get_sound_samples);
 
 struct Loaded_Bitmap {
-  u32 *pixels;
+  u32* pixels;
   i32 width;
   i32 height;
 };
@@ -271,11 +273,11 @@ struct Controlled_Hero {
 };
 
 struct Game_State {
-  World *world;
+  World* world;
   Memory_Arena world_arena;
 
   u32 camera_following_entity_index;
-  Controlled_Hero controlled_heroes[ArrayCount(((Game_Input *)0)->controllers)];
+  Controlled_Hero controlled_heroes[ArrayCount(((Game_Input*)0)->controllers)];
 
   u32 low_entity_count;
   Low_Entity low_entities[10000];
@@ -303,7 +305,7 @@ struct Game_State {
 };
 
 struct Entity_Visible_Piece {
-  Loaded_Bitmap *bitmap;
+  Loaded_Bitmap* bitmap;
   v2 offset;
   real32 offset_z;
   real32 entity_z_c;
@@ -312,13 +314,13 @@ struct Entity_Visible_Piece {
 };
 
 struct Entity_Visible_Piece_Group {
-  Game_State *game_state;
+  Game_State* game_state;
   u32 piece_count;
   Entity_Visible_Piece pieces[32];
 };
 
-inline Low_Entity *getLowEntity(Game_State *game_state, u32 index) {
-  Low_Entity *entitiy = 0;
+inline Low_Entity* getLowEntity(Game_State* game_state, u32 index) {
+  Low_Entity* entitiy = 0;
 
   if ((index > 0) && (index < game_state->low_entity_count)) {
     entitiy = game_state->low_entities + index;

@@ -1,5 +1,5 @@
-#include "core.h"
-#include "sim_region.h"
+// #include "core.h"
+// #include "sim_region.h"
 #if !defined(CORE_ENTITY_H)
 
 #define InvalidPos V2(100000.0f, 1000000.0f)

@@ -1,5 +1,5 @@
-#include "core_world.h"
-#if !defined(ERROR_REMOVER)
+// #include "core_world.h"
+#if !defined(UNITY_BUILD_ERROR_REMOVER)
 #include "core.h"
 #endif
 
@@ -48,7 +48,6 @@ inline bool32 areInSameChunk(World* world, World_Position* a,
 
   return result;
 }
-
 
 inline World_Chunk* getWorldChunk(World* world, i32 chunk_x, i32 chunk_y,
                                   i32 chunk_z, Memory_Arena* arena = 0) {

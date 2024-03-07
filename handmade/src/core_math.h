@@ -1,6 +1,6 @@
-#if !defined(ERROR_REMOVER)
-#include "core.h"
-#endif
+// #if !defined(ERROR_REMOVER)
+// #include "core.h"
+// #endif
 
 #if !defined(CORE_MATH_H)
 
@@ -77,7 +77,7 @@ inline v2 operator*(v2 b, real32 a) {
   return result;
 }
 
-inline v2 operator*=(v2 &b, real32 a) {
+inline v2 operator*=(v2& b, real32 a) {
   b = a * b;
   return b;
 }
@@ -100,7 +100,7 @@ inline v2 operator+(v2 a, v2 b) {
   return result;
 }
 
-inline v2 operator+=(v2 &a, v2 b) {
+inline v2 operator+=(v2& a, v2 b) {
 
   a = a + b;
 
