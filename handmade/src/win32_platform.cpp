@@ -1031,7 +1031,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
                 Game_Controller_Input* old_controller = getController(old_input, controller_index + 1);
 
                 // Simply get the state of the controller from XInput.
-                dwResult = XInputGetState(controller_index, &x_input_controller_state );
+                dwResult = XInputGetState(controller_index, &x_input_controller_state);
 
                 if(dwResult == ERROR_SUCCESS)
                 {
