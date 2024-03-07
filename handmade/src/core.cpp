@@ -576,7 +576,6 @@ static Add_Low_Entity_Result addPlayer(Game_State* game_state) {
   }
 
   return entity;
-
 }
 
 extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
@@ -590,7 +589,6 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
 
   Game_State* game_state = (Game_State*)memory->permanent_storage;
 
-
   if (!memory->is_initialized) {
     // TODO: Remove?
 
@@ -602,7 +600,6 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
     p_zero.chunk_y = 1;
     p_zero.chunk_z = 0;
     addLowEntity(game_state, entityType_Null, nullPosition());
-
 
     game_state->backdrop = DEBUG_loadBMP(*memory->DEBUG_platformReadEntireFile,
                                          thread, "../test/test_background.bmp");

@@ -1,6 +1,6 @@
 #include "sim_region.h"
 
-#if !defined(ERROR_REMOVER)
+#if !defined(UNITY_BUILD_ERROR_REMOVER)
 #include "core.h"
 #endif
 
