@@ -598,8 +598,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
 #endif
 
     world_position NewCameraP = {};
-    uint32 CameraTileX = ScreenBaseX * TilesPerWidth + 17 / 2;
-    uint32 CameraTileY = ScreenBaseY * TilesPerHeight + 9 / 2;
+    uint32 CameraTileX = (ScreenBaseX * TilesPerWidth) + 17 / 2;
+    uint32 CameraTileY = (ScreenBaseY * TilesPerHeight) + 9 / 2;
     uint32 CameraTileZ = ScreenBaseZ;
     NewCameraP = ChunkPositionFromTilePosition(GameState->World, CameraTileX,
                                                CameraTileY, CameraTileZ);
@@ -679,8 +679,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
   }
 
   // TODO(casey): I am totally picking these numbers randomly!
-  uint32 TileSpanX = 17 * 3;
-  uint32 TileSpanY = 9 * 3;
+  uint32 TileSpanX = 25 * 3;
+  uint32 TileSpanY = 15 * 3;
   rectangle2 CameraBounds =
       RectCenterDim(V2(0, 0), World->TileSideInMeters *
                                   V2((real32)TileSpanX, (real32)TileSpanY));

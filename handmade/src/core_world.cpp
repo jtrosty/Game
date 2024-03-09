@@ -127,21 +127,21 @@ static void initializeWorld(World* world, real32 tile_side_in_meters) {
 inline void recanonicalizeCoordinate(World* world, i32* tile,
                                      real32* tile_rel) {
   // Assume tile_map is terrodial. tile_map
-  // TODO(casey): Need to do something that doesn't use the divide/multiply
+  // TODO: Need to do something that doesn't use the divide/multiply
   // method for recanonicalizing because this can end up rounding back on to the
   // tile you just came from.
 
-  // NOTE(casey): World is assumed to be toroidal topology, if you
+  // NOTE: World is assumed to be toroidal topology, if you
   // step off one end you come back on the other!
   //
   i32 offset = roundReal32ToInt32(
       *tile_rel / world->chunk_side_in_meters); // this will be 1 or -1
 
-  // NOTE(Jon): Worl dis assumed to be toroidal topology. If you step off one
+  // NOTE: (Jon) Worl dis assumed to be toroidal topology. If you step off one
   // end you come back ont he other.
-  *tile_rel -= offset * world->chunk_side_in_meters;
   // TODO: Verify this addition happens correctly between u32 and i32
   *tile += offset;
+  *tile_rel -= offset * world->chunk_side_in_meters;
 
   Assert(isCanonical(world, *tile_rel));
 }

@@ -1,8 +1,12 @@
+// #include "sim_region.h"
+#include <utility>
+
 #define UNITY_BUILD_CLANGD_ERR_REMOVER
 
 #include "core.h"
 #include "core_entity.h"
 #include "core_random.h"
+
 #include "core_world.cpp"
 
 #include "core_sim_region.cpp"
@@ -267,7 +271,7 @@ inline void pushPiece(Entity_Visible_Piece_Group* group, Loaded_Bitmap* bitmap,
 
   piece->bitmap = bitmap;
   piece->offset =
-      group->game_state->meters_to_pixels * V2(offset.x, -offset.y) - align;
+      group->game_state->meters_to_pixels * V2(offset.x, offset.y) - align;
   piece->offset_z = group->game_state->meters_to_pixels * offset_z;
   piece->entity_z_c = entity_z_c;
   piece->r = color.r;
@@ -278,7 +282,6 @@ inline void pushPiece(Entity_Visible_Piece_Group* group, Loaded_Bitmap* bitmap,
 }
 
 inline void pushBitmap(Entity_Visible_Piece_Group* group, Loaded_Bitmap* bitmap,
-
                        v2 offset, real32 offset_z, v2 align,
                        real32 alpha = 1.0f, real32 entity_z_c = 1.0f) {
   pushPiece(group, bitmap, offset, offset_z, align, V2(0, 0),
@@ -286,7 +289,6 @@ inline void pushBitmap(Entity_Visible_Piece_Group* group, Loaded_Bitmap* bitmap,
 }
 
 inline void pushRect(Entity_Visible_Piece_Group* group, v2 offset,
-
                      real32 offset_z, v2 dim, v4 color,
                      real32 entity_z_c = 1.0f) {
   pushPiece(group, 0, offset, offset_z, V2(0, 0), dim, color, entity_z_c);
@@ -432,8 +434,8 @@ struct Add_Low_Entity_Result {
   u32 low_index;
 };
 
-static Add_Low_Entity_Result addLowEntity(Game_State* game_state,
-                                          Entity_Type type, World_Position p) {
+static Add_Low_Entity_Result
+createLowEntity(Game_State* game_state, Entity_Type type, World_Position p) {
   Assert(game_state->low_entity_count < ArrayCount(game_state->low_entities));
   u32 entity_index = game_state->low_entity_count++;
 
@@ -461,18 +463,20 @@ static Add_Low_Entity_Result addWall(Game_State* game_state, u32 abs_tile_x,
 
   World_Position p = chunkPositionFromTilePosition(
       game_state->world, abs_tile_x, abs_tile_y, abs_tile_z);
-  Add_Low_Entity_Result entity = addLowEntity(game_state, entityType_Wall, p);
+  Add_Low_Entity_Result entity =
+      createLowEntity(game_state, entityType_Wall, p);
 
   entity.low->sim.height = game_state->world->tile_side_in_meters;
   entity.low->sim.width = entity.low->sim.height;
-  entity.low->sim.collides = true;
+  addFlag(&entity.low->sim, Entity_Flag_Collides);
 
   return entity;
 }
 
 static Add_Low_Entity_Result initializePlayer(Game_State* game_state) {
   World_Position p = game_state->camera_pos;
-  Add_Low_Entity_Result entity = addLowEntity(game_state, entityType_Hero, p);
+  Add_Low_Entity_Result entity =
+      createLowEntity(game_state, entityType_Hero, p);
 
   entity.low->sim.height = 1.0f;
   entity.low->sim.width = 1.0f;
@@ -484,10 +488,14 @@ static Add_Low_Entity_Result initializePlayer(Game_State* game_state) {
   return entity;
 }
 
-/*
-static void setCamera(Game_State* game_state, World_Position new_camera_p) {
-    World* world = game_state->world;
+static void setCamera(Game_State* game_state) {
+  if (game_state->camera_following_entity_index) {
+    game_state->camera_pos =
+        game_state->low_entities[game_state->camera_following_entity_index].p;
+  }
+}
 
+/*
     //Assert(validateEntityPairs(game_state));
 
     World_Difference d_camera_p = worldSubtract(world, &new_camera_p,
@@ -562,13 +570,16 @@ entity_index; if (low_entity->high_entity_index == 0) { if
 }
     */
 
-static Add_Low_Entity_Result addPlayer(Game_State* game_state) {
+// NOTE: I have changed the name to 'createPlayerEntity' form addPlayer
+static Add_Low_Entity_Result createPlayerEntity(Game_State* game_state) {
 
   World_Position p = game_state->camera_pos;
-  Add_Low_Entity_Result entity = addLowEntity(game_state, entityType_Hero, p);
+  Add_Low_Entity_Result entity =
+      createLowEntity(game_state, entityType_Hero, p);
 
   entity.low->sim.height = 0.5f; // 1.4f;
   entity.low->sim.width = 1.0f;
+  addFlag(&entity.low->sim, Entity_Flag_Collides);
   entity.low->sim.collides = true;
 
   if (game_state->camera_following_entity_index == 0) {
@@ -599,7 +610,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
     p_zero.chunk_x = 1;
     p_zero.chunk_y = 1;
     p_zero.chunk_z = 0;
-    addLowEntity(game_state, entityType_Null, nullPosition());
+    createLowEntity(game_state, entityType_Null, nullPosition());
 
     game_state->backdrop = DEBUG_loadBMP(*memory->DEBUG_platformReadEntireFile,
                                          thread, "../test/test_background.bmp");
@@ -796,7 +807,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
     }
 
     World_Position new_camera_p = {};
-    u32 camera_tile_x = 17 / 2 + screen_base_x * tiles_per_width;
+    u32 camera_tile_x = 19 / 2 + screen_base_x * tiles_per_width;
     u32 camera_tile_y = 9 / 2 + screen_base_y * tiles_per_height;
     u32 camera_tile_z = screen_base_z;
     new_camera_p = chunkPositionFromTilePosition(world, camera_tile_x,
@@ -823,9 +834,11 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
     if (controlled_hero->entity_index == 0) {
       if (controller->start.ended_down) {
         *controlled_hero = {};
-        controlled_hero->entity_index = addPlayer(game_state).low_index;
+        controlled_hero->entity_index =
+            createPlayerEntity(game_state).low_index;
       }
     } else {
+      controlled_hero->dz = 0.0f;
       controlled_hero->ddp = {};
 
       if (controller->is_analog) {
@@ -867,12 +880,13 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
   real32 screen_center_x = 0.5f * (real32)buffer->width;
   real32 screen_center_y = 0.5f * (real32)buffer->height;
 
-  u32 tile_span_x = 17 * 3;
-  u32 tile_span_y = 9 * 3;
+  u32 tile_span_x = 25 * 3;
+  u32 tile_span_y = 15 * 3;
 
   Rectangle2 camera_bounds =
       rectCenterDim(V2(0, 0), world->tile_side_in_meters *
                                   V2((real32)tile_span_x, (real32)tile_span_y));
+  setCamera(game_state);
 
   Memory_Arena sim_arena;
   initializeArena(&sim_arena, memory->transient_storage_size,
@@ -890,15 +904,18 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
     render_piece_group.piece_count = 0;
     real32 dt = input->dt_for_frame;
 
-    real32 player_red = 0.0f;
+    real32 player_red = 1.0f;
     real32 player_green = 1.0f;
-    real32 player_blue = 1.0f;
+    real32 player_blue = .0f;
 
-    real32 wall_red = 1.0f;
+    real32 wall_red = 0.0f;
     real32 wall_green = 1.0f;
-    real32 wall_blue = 0.0f;
+    real32 wall_blue = 1.0f;
     real32 meters_to_pixels =
         (real32)world->tile_side_in_pixels / world->tile_side_in_meters;
+
+    Move_Spec move_spec = defaultMoveSpec();
+    v2 ddp = {};
 
     switch (entity->type) {
     case entityType_Hero: {
@@ -911,12 +928,10 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
         if (entity->storage_index == controlled_hero->entity_index) {
           entity->dZ = controlled_hero->dz;
 
-          Move_Spec move_spec = defaultMoveSpec();
           move_spec.unit_max_accel_vector = true;
           move_spec.drag = 8.0f;
           move_spec.speed = 50.0f;
-          moveEntity(sim_region, entity, input->dt_for_frame, &move_spec,
-                     controlled_hero->ddp);
+          ddp = controlled_hero->ddp;
         }
         // TODO: Debug stuff remove soon2.
         // RenderPlayer(buffer, input->mouse_x, input->mouse_y);
@@ -933,7 +948,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
     case entityType_Wall: {
       pushRect(&render_piece_group, V2(0, 0), 0,
                V2(entity->width, entity->height),
-               V4(0.0, wall_red, wall_green, wall_blue));
+               V4(wall_red, wall_green, wall_blue, 0.0));
       break;
     }
     case entityType_Null: {
@@ -945,14 +960,18 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
       break;
     }
     }
+
+    if (!isSet(entity, Entity_Flag_Nonspatial)) {
+      moveEntity(sim_region, entity, input->dt_for_frame, &move_spec, ddp);
+    }
+
     // Render Time
-    // TODO: In Casey's verison this is in the the above for loop for cycling
-    // thorugh enitities in the sim region
     real32 entity_ground_point_x =
         screen_center_x + (game_state->meters_to_pixels * entity->p.x);
     real32 entity_ground_point_y =
         screen_center_y - (game_state->meters_to_pixels * entity->p.y);
     real32 entity_z = -game_state->meters_to_pixels * entity->z;
+
     for (u32 piece_index = 0; piece_index < render_piece_group.piece_count;
          ++piece_index) {
       Entity_Visible_Piece* render_piece =
@@ -977,13 +996,6 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
 
   drawRectangle(buffer, world_difference.dXY, V2(10.0, 10.0f), 1.0f, 1.0f,
                 0.0f);
-
-  for (int button_index = 0; button_index < ArrayCount(input->mouse_buttons);
-       ++button_index) {
-    if (input->mouse_buttons[button_index].ended_down) {
-      // RenderPlayer(Buffer, 10 + 20*ButtonIndex, 10);
-    }
-  }
   endSim(game_state, sim_region);
 }
 
@@ -991,27 +1003,3 @@ extern "C" GAME_GET_SOUND_SAMPLES(GameGetSoundSamples) {
   Game_State* game_state = (Game_State*)memory->permanent_storage;
   gameOutputSound(game_state, sound_buffer, game_state->tone_hz);
 }
-
-/* bool32 is_valid = false;
-        if ((player_tile_x >= 0) && (player_tile_x < TILE_MAP_COUNT_X) &&
-            (player_tile_y >= 0) && (player_tile_y < TILE_MAP_COUNT_Y)) {
-                u32 tile_map_value = active_tile_map->tiles[(player_tile_y *
-   TILE_MAP_COUNT_X) + player_tile_x]; is_valid = (tile_map_value == 1); if
-   (tile_map_value == 1) { is_valid = 1;
-                }
-                else {
-                    is_valid = 0;
-                }
-        }
-        if (is_valid) {
-            game_state->player_x = new_player_x;
-            game_state->player_y = new_player_y;
-            game_state->player_tile_x = player_tile_x;
-            game_state->player_tile_y = player_tile_y;
-        }
-*/
-
-// game_state->player_x += truncateReal32ToInt32(move_scale *
-// (input->dt_for_frame) * (controller->left_stick_average_x));
-// game_state->player_y += truncateReal32ToInt32(move_scale *
-// (input->dt_for_frame) * (controller->left_stick_average_y));

@@ -82,6 +82,7 @@ struct Sim_Region {
 
   World_Position origin;
   Rectangle2 region_bounds;
+  Rectangle2 updatable_bounds;
 
   u32 max_entity_count;
   u32 entity_count;

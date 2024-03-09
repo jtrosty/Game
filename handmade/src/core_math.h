@@ -181,6 +181,13 @@ inline Rectangle2 rectCenterHalfDim(v2 center, v2 half_dim) {
   return result;
 }
 
+inline Rectangle2 addRadiusTo(Rectangle2 a, real32 radius_w, real32 radius_h) {
+  Rectangle2 result;
+  result.min = a.min - V2(radius_w, radius_h);
+  result.max = a.max + V2(radius_w, radius_h);
+  return result;
+}
+
 inline Rectangle2 rectCenterDim(v2 center, v2 dim) {
   Rectangle2 result = rectCenterHalfDim(center, 0.5 * dim);
 

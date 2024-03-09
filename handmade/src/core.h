@@ -106,6 +106,8 @@ static void zeroSize(memory_index size, void* ptr) {
 #include "core_world.h"
 #include "sim_region.h"
 
+#include "core_entity.h"
+
 typedef struct Debug_Read_File_Result {
   uint32 contents_size;
   void* contents;
@@ -316,7 +318,7 @@ struct Entity_Visible_Piece {
 struct Entity_Visible_Piece_Group {
   Game_State* game_state;
   u32 piece_count;
-  Entity_Visible_Piece pieces[32];
+  Entity_Visible_Piece pieces[64];
 };
 
 inline Low_Entity* getLowEntity(Game_State* game_state, u32 index) {

@@ -1,5 +1,5 @@
 #if !defined(ERROR_REMOVER)
-#include "core.h"
+// #include "core.h"
 #endif
 
 #if !defined(CORE_RANDOM_H)
