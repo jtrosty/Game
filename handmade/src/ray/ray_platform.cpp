@@ -1,20 +1,15 @@
-/*
-#if !WIN_RAY
-#include <dlfcn.h>
-#include <sys/syslimits.h> //TODO: I only have this for max file path macro?
-#include <sys/stat.h>
+#if defined(WIN_RAY)
 #include "../../external/raylib.h"
+#include <dlfcn.h>
+#include <sys/stat.h>
+#include <sys/syslimits.h> //TODO: I only have this for max file path macro?
 #define RAY_STATE_FILE_NAME_COUNT PATH_MAX
-
-#else 
+#else
 #define RAY_STATE_FILE_NAME_COUNT 4096
-#include "C:/raylib/raylib/src/raylib.h"
 #endif
-*/
 
-//#include "../dynamic.h"
-=======
-// #include "../../external/raylib.h"
+// #include "../dynamic.h"
+//  #include "../../external/raylib.h"
 #include "../core.h"
 #include <cstdio>
 #include <dlfcn.h>
@@ -22,7 +17,7 @@
 #include <sys/stat.h>
 #include <sys/syslimits.h> //TODO: I only have this for max file path macro?
 #include <time.h>
-  
+
 //
 //
 // 2. setup repaly
@@ -65,7 +60,7 @@ DEBUG_PLATFORM_WRITE_ENTIRE_FILE(debug_platform_write_entire_file);
 //**************************** DEBUG FILE
 // SECTION******************************//
 
-static void winToRaylibPixelFormat(Game_Offscreen_Buffer *buffer) {
+static void winToRaylibPixelFormat(Game_Offscreen_Buffer* buffer) {
   // b g r a
   //    a b g r
   // Raylib is    R8 G8 B8 A8
@@ -75,7 +70,7 @@ static void winToRaylibPixelFormat(Game_Offscreen_Buffer *buffer) {
   //       g
   //       b
   int num_of_pixels = (buffer->height * buffer->width);
-  u32 *pixels = (u32 *)buffer->memory;
+  u32* pixels = (u32*)buffer->memory;
   // u32 alpha_mask = 0x00FFFFFF;
   // u32 alpha_mask = 0xFFFFFF00;
   // u32 alpha_mask = 0x000000FF;
@@ -107,9 +102,9 @@ static void winToRaylibPixelFormat(Game_Offscreen_Buffer *buffer) {
   }
 }
 
-static void catStrings(size_t source_a_count, char *source_a,
-                       size_t source_b_count, char *source_b, size_t dest_count,
-                       char *dest) {
+static void catStrings(size_t source_a_count, char* source_a,
+                       size_t source_b_count, char* source_b, size_t dest_count,
+                       char* dest) {
   for (int index = 0; index < source_a_count; ++index) {
     *dest++ = *source_a++;
   }
@@ -119,7 +114,7 @@ static void catStrings(size_t source_a_count, char *source_a,
   *dest++ = 0;
 }
 
-static int stringLength(char *string) {
+static int stringLength(char* string) {
   int count = 0;
   while (*string++) {
     ++count;
@@ -131,9 +126,9 @@ DEBUG_PLATFORM_FREE_FILE_MEMORY(debug_platformFreeFileMemory){InvalidCodePath}
 
 DEBUG_PLATFORM_READ_ENTIRE_FILE(debug_platformReadEntireFile) {
 
-  char *start_of_path =
+  char* start_of_path =
       "/Users/jonathantrost/Documents/code/warfare/Game/handmade/";
-  char *c = start_of_path;
+  char* c = start_of_path;
   u32 length_path_start = 0;
   while (*c != '\0') {
     c++;
@@ -141,7 +136,7 @@ DEBUG_PLATFORM_READ_ENTIRE_FILE(debug_platformReadEntireFile) {
   }
 
   Debug_Read_File_Result result = {};
-  char *char_ptr = filename;
+  char* char_ptr = filename;
   u32 length_path = 0;
   while (*char_ptr != '\0') {
     char_ptr++;
@@ -158,7 +153,7 @@ DEBUG_PLATFORM_READ_ENTIRE_FILE(debug_platformReadEntireFile) {
   path_final[final_len] = '\0';
 
   result.contents =
-      (void *)LoadFileData(path_final, (int *)&result.contents_size);
+      (void*)LoadFileData(path_final, (int*)&result.contents_size);
 
   return result;
 }
@@ -180,7 +175,7 @@ struct Ray_Window_Dimension {
 struct Ray_Sound_Output_Buffer {
   i32 samples_per_second;
   i32 sample_count;
-  i16 *samples;
+  i16* samples;
   u32 running_sample_index;
   int bytes_per_sample;
   u32 secondary_buffer_size;
@@ -189,25 +184,25 @@ struct Ray_Sound_Output_Buffer {
 };
 
 struct Ray_Replay_Buffer {
-  void *file_handle;
-  void *memory_map;
+  void* file_handle;
+  void* memory_map;
   char file_name[RAY_STATE_FILE_NAME_COUNT];
-  void *memory_block;
+  void* memory_block;
 };
 
 struct Ray_State {
   uint64 total_size;
-  void *game_memory_block;
+  void* game_memory_block;
   Ray_Replay_Buffer replay_buffers[4];
 
-  void *recording_handle;
+  void* recording_handle;
   int input_recording_index;
 
-  void *playback_handle;
+  void* playback_handle;
   int input_playing_index;
 
   char EXE_file_name[RAY_STATE_FILE_NAME_COUNT];
-  char *one_past_last_EXE_filename_slash;
+  char* one_past_last_EXE_filename_slash;
 
   long last_time_dll_loaded;
 };
@@ -216,11 +211,11 @@ struct Ray_Game_Memory {
   bool32 is_initialized;
 
   u64 permanent_storage_size;
-  void *permanent_storage; // NOTE(casey): REQUIRED to be cleared to zero at
+  void* permanent_storage; // NOTE(casey): REQUIRED to be cleared to zero at
                            // startup
 
   u64 transient_storage_size;
-  void *transient_storage; // NOTE(casey): REQUIRED to be cleared to zero at
+  void* transient_storage; // NOTE(casey): REQUIRED to be cleared to zero at
                            // startup
 };
 
@@ -229,27 +224,27 @@ struct ray_global_buffer {
 };
 
 struct Ray_Game_Code {
-  void *game_code_dll;
+  void* game_code_dll;
   long dll_last_write_time;
   unsigned short temp_dll_number;
 
-  game_update_and_render *update_and_render_fn;
-  game_get_sound_samples *get_sound_samples_fn;
+  game_update_and_render* update_and_render_fn;
+  game_get_sound_samples* get_sound_samples_fn;
 
   bool32 is_valid;
 };
 // Global
 Ray_Game_Code global_game_code = {0};
 
-long getLastWriteTime(char *game_lib_full_path) {
+long getLastWriteTime(char* game_lib_full_path) {
   time_t result = 0;
 
   return result;
 }
 
 // TODO: Not tested
-static bool mac_checkDllChanges(Ray_Game_Code *game_code,
-                                const char *game_dll_full_path) {
+static bool mac_checkDllChanges(Ray_Game_Code* game_code,
+                                const char* game_dll_full_path) {
   long last_write_time = GetFileModTime(game_dll_full_path);
 
   if (last_write_time > game_code->dll_last_write_time)
@@ -258,7 +253,7 @@ static bool mac_checkDllChanges(Ray_Game_Code *game_code,
   return false;
 }
 
-static long mac_getFileModTime(const char *filename) {
+static long mac_getFileModTime(const char* filename) {
   struct stat stat_test = {0};
   long result = 0;
 
@@ -270,9 +265,9 @@ static long mac_getFileModTime(const char *filename) {
   return 0;
 }
 
-static void mac_LoadDllGameCode(Ray_Game_Code *game_code,
-                                const char *game_dll_full_path,
-                                const char *temp_dll_full_path) {
+static void mac_LoadDllGameCode(Ray_Game_Code* game_code,
+                                const char* game_dll_full_path,
+                                const char* temp_dll_full_path) {
 
   game_code->dll_last_write_time = GetFileModTime(game_dll_full_path);
   if (game_code->dll_last_write_time) {
@@ -283,8 +278,8 @@ static void mac_LoadDllGameCode(Ray_Game_Code *game_code,
   unsigned int loaded_dll_bytes_read = 0;
 
   // Load file data as byte array (read)
-  unsigned char *loaded_dll =
-      LoadFileData(game_dll_full_path, (int *)&loaded_dll_bytes_read);
+  unsigned char* loaded_dll =
+      LoadFileData(game_dll_full_path, (int*)&loaded_dll_bytes_read);
   if (!SaveFileData(temp_dll_full_path, loaded_dll, loaded_dll_bytes_read)) {
     printf("Failed to save temp dll\n");
     TraceLog(LOG_VALUE, "Failed to save teh temp dll.");
@@ -296,9 +291,9 @@ static void mac_LoadDllGameCode(Ray_Game_Code *game_code,
   game_code->game_code_dll = dlopen(temp_dll_full_path, RTLD_NOW);
 
   if (game_code->game_code_dll) {
-    game_code->update_and_render_fn = (game_update_and_render *)dlsym(
+    game_code->update_and_render_fn = (game_update_and_render*)dlsym(
         game_code->game_code_dll, "GameUpdateAndRender");
-    game_code->get_sound_samples_fn = (game_get_sound_samples *)dlsym(
+    game_code->get_sound_samples_fn = (game_get_sound_samples*)dlsym(
         game_code->game_code_dll, "GameGetSoundSamples");
     game_code->is_valid =
         (game_code->update_and_render_fn && game_code->get_sound_samples_fn);
@@ -308,6 +303,7 @@ static void mac_LoadDllGameCode(Ray_Game_Code *game_code,
   }
 
   // If there is a failure, set the functions pointers to zero.
+  // i
   if (!game_code->is_valid) {
     game_code->update_and_render_fn = 0;
     game_code->get_sound_samples_fn = 0;
@@ -316,7 +312,7 @@ static void mac_LoadDllGameCode(Ray_Game_Code *game_code,
 }
 
 // Not Tested
-static void mac_unloadGameCode(Ray_Game_Code *game_code) {
+static void mac_unloadGameCode(Ray_Game_Code* game_code) {
   if (game_code->game_code_dll) {
     dlclose(game_code->game_code_dll);
     game_code->game_code_dll = 0;
@@ -345,19 +341,19 @@ float sineIdx = 0.0f;
 // DEBUG ************************8
 //
 struct Global_Audio_Callback {
-  Thread_Context *thread;
-  Game_Memory *game_memory;
-  Game_Sound_Output_Buffer *secondary_sound_buffer;
+  Thread_Context* thread;
+  Game_Memory* game_memory;
+  Game_Sound_Output_Buffer* secondary_sound_buffer;
 
 } global_audio_callback;
 
-void DEBUG_AudioInputCallback(void *buffer, unsigned int frames) {
+void DEBUG_AudioInputCallback(void* buffer, unsigned int frames) {
   global_audio_callback.secondary_sound_buffer->sample_count = frames;
   global_game_code.get_sound_samples_fn(
       global_audio_callback.thread, global_audio_callback.game_memory,
       global_audio_callback.secondary_sound_buffer);
-  short *d = (short *)buffer;
-  short *in = (short *)global_audio_callback.secondary_sound_buffer->samples;
+  short* d = (short*)buffer;
+  short* in = (short*)global_audio_callback.secondary_sound_buffer->samples;
 
   for (int i = 0; i < frames; i++) {
     *d++ = *in++;
@@ -365,7 +361,7 @@ void DEBUG_AudioInputCallback(void *buffer, unsigned int frames) {
   }
 }
 
-int main(int argv, char *argc[]) {
+int main(int argv, char* argc[]) {
   // Initialization
   //--------------------------------------------------------------------------------------
   SetConfigFlags(FLAG_MSAA_4X_HINT); // Set MSAA 4X hint before windows creation
@@ -383,8 +379,8 @@ int main(int argv, char *argc[]) {
   AudioStream stream = LoadAudioStream(samples_per_second, 16, 2);
   PlayAudioStream(stream);
 
-  short *write_buffer =
-      (short *)MemAlloc(sizeof(short) * MAX_SAMPLES_PER_UPDATE);
+  short* write_buffer =
+      (short*)MemAlloc(sizeof(short) * MAX_SAMPLES_PER_UPDATE);
   SetAudioStreamVolume(stream, 1.0f);
 
   Ray_Sound_Output_Buffer platform_sound_buffer = {};
@@ -398,8 +394,8 @@ int main(int argv, char *argc[]) {
   secondary_sound_buffer.samples_per_second =
       platform_sound_buffer.samples_per_second;
   secondary_sound_buffer.samples =
-      (short *)MemAlloc(secondary_sound_buffer.samples_per_second *
-                        platform_sound_buffer.bytes_per_sample);
+      (short*)MemAlloc(secondary_sound_buffer.samples_per_second *
+                       platform_sound_buffer.bytes_per_sample);
 
   Ray_State ray_state = {0};
   Thread_Context thread = {0};
@@ -407,11 +403,11 @@ int main(int argv, char *argc[]) {
 
   // Controllers
   Game_Input game_input[2] = {0};
-  Game_Input *new_input = &game_input[0];
-  Game_Input *old_input = &game_input[1];
+  Game_Input* new_input = &game_input[0];
+  Game_Input* old_input = &game_input[1];
 
   // Memory
-  void *base_address = 0;
+  void* base_address = 0;
   Game_Memory game_memory = {0};
   game_memory.permanent_storage_size = Megabytes(32);
   game_memory.transient_storage_size = Megabytes(32);
@@ -424,8 +420,8 @@ int main(int argv, char *argc[]) {
       game_memory.permanent_storage_size + game_memory.transient_storage_size;
   ray_state.game_memory_block = MemRealloc(base_address, ray_state.total_size);
   game_memory.permanent_storage = ray_state.game_memory_block;
-  game_memory.transient_storage = ((u8 *)game_memory.permanent_storage +
-                                   game_memory.permanent_storage_size);
+  game_memory.transient_storage =
+      ((u8*)game_memory.permanent_storage + game_memory.permanent_storage_size);
 
   // Getting how to transfer offscreen buffer into image on raylib
   Game_Offscreen_Buffer buffer = {0};
@@ -455,12 +451,12 @@ int main(int argv, char *argc[]) {
 
   // Load game code
   //--------------------------------------------------------------------------------------
-  const char *game_dll_full_path = "/Users/jonathantrost/Documents/code/"
+  const char* game_dll_full_path = "/Users/jonathantrost/Documents/code/"
                                    "warfare/Game/handmade/build/ray_core.dylib";
   // const char* game_dll_full_path = "ray_core.dylib";
   // const char* game_dll_full_path =
   // "/Users/jonathantrost/Documents/code/warfare/Game/handmade/build/test.txt";
-  const char *temp_dll_full_path =
+  const char* temp_dll_full_path =
       "/Users/jonathantrost/Documents/code/warfare/Game/handmade/build/"
       "temp_ray_core.dylib";
 
@@ -476,15 +472,19 @@ int main(int argv, char *argc[]) {
     const char* game_dll_full_path = "w:/build/core.dll";
     const char* temp_dll_full_path = "w:/build/temp_core.dll";
 
-#else 
-    const char* game_dll_full_path = "/Users/jonathantrost/Documents/code/warfare/Game/handmade/build/ray_core.dylib";
+#else
+    const char* game_dll_full_path =
+"/Users/jonathantrost/Documents/code/warfare/Game/handmade/build/ray_core.dylib";
     //const char* game_dll_full_path = "ray_core.dylib";
-    //const char* game_dll_full_path = "/Users/jonathantrost/Documents/code/warfare/Game/handmade/build/test.txt";
-    const char* temp_dll_full_path = "/Users/jonathantrost/Documents/code/warfare/Game/handmade/build/temp_ray_core.dylib";
-    
+    //const char* game_dll_full_path =
+"/Users/jonathantrost/Documents/code/warfare/Game/handmade/build/test.txt";
+    const char* temp_dll_full_path =
+"/Users/jonathantrost/Documents/code/warfare/Game/handmade/build/temp_ray_core.dylib";
+
     //char* hello = LoadFileText("../test.txt");
-    SaveFileText("/Users/jonathantrost/Documents/code/warfare/Game/handmade/build/test.txt", "adding this test\0");
-    // TODO does this work as expected  
+    SaveFileText("/Users/jonathantrost/Documents/code/warfare/Game/handmade/build/test.txt",
+"adding this test\0");
+    // TODO does this work as expected
     game_code = *mac_LoadDllGameCode(game_dll_full_path, temp_dll_full_path);
 #endif
 
@@ -501,11 +501,12 @@ int main(int argv, char *argc[]) {
 #else
         if (mac_checkDllChanges(&game_code, game_dll_full_path)) {
             mac_unloadGameCode(&game_code);
-            game_code = *mac_LoadDllGameCode(game_dll_full_path, temp_dll_full_path);
+            game_code = *mac_LoadDllGameCode(game_dll_full_path,
+temp_dll_full_path);
         }
 #endif
 */
-  
+
   //--------------------------------------------------------------------------------------
 
   SetAudioStreamCallback(stream, DEBUG_AudioInputCallback);

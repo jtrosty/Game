@@ -26,12 +26,22 @@ EXTERNAL_FULL="/Users/jonathantrost/Documents/code/warfare/Game/handmade/externa
 EXTERNAL_DIR="/Users/jonathantrost/Documents/code/warfare/Game/handmade/external/libraylib.a"
 OTHER_LIB="/usr/local/lib/"
 
-EXTERNAL_IN="/Users/jonathantrost/Documents/code/warfare/Game/handmade/external"
 
-# Set your raylib/src location here (relative path!)
-RAYLIB_LIB="/Users/jonathantrost/Documents/code/raylib/src/"
-FULL_RAYLIB_SRC="/Users/jonathantrost/Documents/code/raylib/src"
-TRY_RAY=" ~/Documents/code/raylib/src"
+
+USER=$(whoami)
+DEENA="deenawahba"
+if [ "$USER" == "$DEENA" ]
+then
+    echo "Deena Wahba laptop"
+    FULL_RAYLIB_SRC="/Users/deenawahba/Code/libs/raylib_5/src"
+    LIBRAYLIB_PATH="/Users/deenawahba/Code/projects/Game/handmade/external"
+    EXTERNAL_IN="/Users/deenawahba/Code/projects/Game/handmade/external/"
+else
+    echo "jon Trost laptop"
+    FULL_RAYLIB_SRC="/Users/jonathantrost/Documents/code/raylib/src"
+    LIBRAYLIB_PATH="/Users/jonathantrost/Code/libs/raylib_5/src"
+    EXTERNAL_IN="/Users/jonathantrost/Documents/code/warfare/Game/handmade/external"
+fi
 
 RAYLIB_DEFINES="-D_DEFAULT_SOURCE -DPLATFORM_DESKTOP -DGRAPHICS_API_OPENGL_33"
 RAYLIB_C_FILES="$RAYLIB_SRC/rcore.c $RAYLIB_SRC/rshapes.c $RAYLIB_SRC/rtextures.c $RAYLIB_SRC/rtext.c $RAYLIB_SRC/rmodels.c $RAYLIB_SRC/utils.c $RAYLIB_SRC/raudio.c"
@@ -61,10 +71,17 @@ fi
 
 pwd
 #clang++ -v -dynamiclib -o ray_core.dylib "$SOURCE/core.cpp" -L $COMPILATION_FLAGS $MAC_LINK_FLAGS $RAYLIB_INCLUDE_FLAGS $HANDMADE_WARNING_FLAGS
+# Space Gray
+#clang++ -v -dynamiclib -o ray_core.dylib "$SOURCE/core.cpp" $MAC_LINK_FLAGS $RAYLIB_INCLUDE_FLAGS $HANDMADE_WARNING_FLAGS $COMPILATION_FLAGS -DEXTRA_ERRORS
+# Starlight
 clang++ -v -dynamiclib -o ray_core.dylib "$SOURCE/core.cpp" $MAC_LINK_FLAGS $RAYLIB_INCLUDE_FLAGS $HANDMADE_WARNING_FLAGS $COMPILATION_FLAGS -DEXTRA_ERRORS
-clang++ -v -o ray_platform $SOURCES_PLATFORM  $FULL_RAYLIB_SRC/libraylib.a -I $RAYLIB_LIB $COMPILATION_FLAGS $MAC_LINK_FLAGS $RAYLIB_INCLUDE_FLAGS $HANDMADE_WARNING_FLAGS #$RAYLIB_DEFINES 
-#clang++ -v -o ray_platform_static $SOURCES_PLATFORM  $EXTERNAL_DIR  $COMPILATION_FLAGS $MAC_LINK_FLAGS $RAYLIB_INCLUDE_FLAGS $HANDMADE_WARNING_FLAGS #$RAYLIB_DEFINES 
+clang++ -v -o ray_platform $SOURCES_PLATFORM  $LIBRAYLIB_PATH/libraylib.a -I $FULL_RAYLIB_SRC $COMPILATION_FLAGS $MAC_LINK_FLAGS $RAYLIB_INCLUDE_FLAGS $HANDMADE_WARNING_FLAGS #$RAYLIB_DEFINES 
 popd
+
+
+
+
+#clang++ -v -o ray_platform_static $SOURCES_PLATFORM  $EXTERNAL_DIR  $COMPILATION_FLAGS $MAC_LINK_FLAGS $RAYLIB_INCLUDE_FLAGS $HANDMADE_WARNING_FLAGS #$RAYLIB_DEFINES 
 #clang++ $CFLAGS -o ./ray_platform ./src/ray/rayplatform.cpp $LIBS -L.?build/
 #clang -o ./build/mac ./src/.c -lm
 #

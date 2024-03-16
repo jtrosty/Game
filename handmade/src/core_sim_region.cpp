@@ -1,5 +1,3 @@
-#include "core_entity.h"
-#include "core_math.h"
 #include "sim_region.h"
 #if !defined(UNITY_BUILD_ERROR_REMOVER)
 #include "core.h"
