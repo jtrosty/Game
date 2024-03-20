@@ -588,6 +588,24 @@ static Add_Low_Entity_Result createPlayerEntity(Game_State* game_state) {
 
   return entity;
 }
+///// We will see
+
+// LDTK Loading
+struct Level_Layer {
+  char* identifier;
+  char* type;
+  int width;
+  int height;
+  void* tiles;
+};
+
+struct LDTK_Data {};
+
+static void loadLevelData(debug_platform_read_entire_file* read_entire_file,
+                          char* filename, Thread_Context* thread) {
+  Debug_Read_File_Result read_result = read_entire_file(thread, filename);
+}
+///// We will see
 
 extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
   // name(Thread_Context* thread, Game_Memory* memory, Game_Input* input,
