@@ -22,9 +22,10 @@ HANDMADE_WARNING_FLAGS="-Wno-deprecated-declarations -Wno-unused-function -Wno-u
 SOURCES_PLATFORM="../src/ray/ray_platform.cpp"
 SOURCE="../src/"
 EXTERNAL="../external"
-EXTERNAL_FULL="/Users/jonathantrost/Documents/code/warfare/Game/handmade/external/libraylib.dylib"
-EXTERNAL_DIR="/Users/jonathantrost/Documents/code/warfare/Game/handmade/external/libraylib.a"
-OTHER_LIB="/usr/local/lib/"
+EXTERNAL_FULL="/Users/jonathantrost/code/projects/Game/handmade/build/ray_core.dylib"
+EXTERNAL_DIR="/Users/jonathantrost/code/libs/raylib_5/src/libraylib.a"
+INCLUDE_CLDTK="-I/Users/jonathantrost/code/libs/cLDtk"
+LIB_CLDTK="/Users/jonathantrost/code/libs/cLDtk/libcLDtk.a"
 
 
 
@@ -38,9 +39,9 @@ then
     EXTERNAL_IN="/Users/deenawahba/Code/projects/Game/handmade/external/"
 else
     echo "jon Trost laptop"
-    FULL_RAYLIB_SRC="/Users/jonathantrost/Documents/code/raylib/src"
+    FULL_RAYLIB_SRC="/Users/jonathantrost/code/libs/raylib_5/src"
     LIBRAYLIB_PATH="/Users/jonathantrost/Code/libs/raylib_5/src"
-    EXTERNAL_IN="/Users/jonathantrost/Documents/code/warfare/Game/handmade/external"
+    EXTERNAL_IN="/Users/jonathantrost/code/projects/Game/handmade/external"
 fi
 
 RAYLIB_DEFINES="-D_DEFAULT_SOURCE -DPLATFORM_DESKTOP -DGRAPHICS_API_OPENGL_33"
@@ -74,7 +75,7 @@ pwd
 # Space Gray
 #clang++ -v -dynamiclib -o ray_core.dylib "$SOURCE/core.cpp" $MAC_LINK_FLAGS $RAYLIB_INCLUDE_FLAGS $HANDMADE_WARNING_FLAGS $COMPILATION_FLAGS -DEXTRA_ERRORS
 # Starlight
-clang++ -v -dynamiclib -o ray_core.dylib "$SOURCE/core.cpp" $MAC_LINK_FLAGS $RAYLIB_INCLUDE_FLAGS $HANDMADE_WARNING_FLAGS $COMPILATION_FLAGS -DEXTRA_ERRORS
+clang++ -v -dynamiclib -o ray_core.dylib "$SOURCE/core.cpp" $MAC_LINK_FLAGS $RAYLIB_INCLUDE_FLAGS $LIB_CLDTK $INCLUDE_CLDTK $HANDMADE_WARNING_FLAGS $COMPILATION_FLAGS -DEXTRA_ERRORS
 clang++ -v -o ray_platform $SOURCES_PLATFORM  $LIBRAYLIB_PATH/libraylib.a -I $FULL_RAYLIB_SRC $COMPILATION_FLAGS $MAC_LINK_FLAGS $RAYLIB_INCLUDE_FLAGS $HANDMADE_WARNING_FLAGS #$RAYLIB_DEFINES 
 popd
 

@@ -11,6 +11,10 @@
 
 #include "core_sim_region.cpp"
 
+extern "C" {
+#include "cLDtk.h"
+}
+
 internal void gameOutputSound(Game_State* game_state,
                               Game_Sound_Output_Buffer* sound_buffer,
                               int tone_hz) {
@@ -610,6 +614,10 @@ static void loadLevelData(debug_platform_read_entire_file* read_entire_file,
 extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
   // name(Thread_Context* thread, Game_Memory* memory, Game_Input* input,
   // Game_Offscreen_Buffer* buffer)
+  loadJSONFile("{\"jsonVersion\":\"\"}", "../test/test_ldtk_level.ldtk");
+  importMapData();
+  struct levels* lvl_one;
+  lvl_one = getLevel("AutoLayer");
 
   Assert(sizeof(Game_State) <= memory->permanent_storage_size);
   Assert(

@@ -451,14 +451,13 @@ int main(int argv, char* argc[]) {
 
   // Load game code
   //--------------------------------------------------------------------------------------
-  const char* game_dll_full_path = "/Users/jonathantrost/Documents/code/"
-                                   "warfare/Game/handmade/build/ray_core.dylib";
+  const char* game_dll_full_path =
+      "/Users/jonathantrost/code/projects/Game/handmade/build/ray_core.dylib";
   // const char* game_dll_full_path = "ray_core.dylib";
   // const char* game_dll_full_path =
   // "/Users/jonathantrost/Documents/code/warfare/Game/handmade/build/test.txt";
-  const char* temp_dll_full_path =
-      "/Users/jonathantrost/Documents/code/warfare/Game/handmade/build/"
-      "temp_ray_core.dylib";
+  const char* temp_dll_full_path = "/Users/jonathantrost/code/projects/Game/"
+                                   "handmade/build/temp_ray_core.dylib";
 
   // char* hello = LoadFileText("../test.txt");
   SaveFileText("test.txt", "adding this test\0");
