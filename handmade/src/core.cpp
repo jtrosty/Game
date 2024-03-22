@@ -614,10 +614,6 @@ static void loadLevelData(debug_platform_read_entire_file* read_entire_file,
 extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
   // name(Thread_Context* thread, Game_Memory* memory, Game_Input* input,
   // Game_Offscreen_Buffer* buffer)
-  loadJSONFile("{\"jsonVersion\":\"\"}", "../test/test_ldtk_level.ldtk");
-  importMapData();
-  struct levels* lvl_one;
-  lvl_one = getLevel("AutoLayer");
 
   Assert(sizeof(Game_State) <= memory->permanent_storage_size);
   Assert(
@@ -744,6 +740,19 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
     bool32 door_up = false;
     bool32 door_down = false;
 
+    loadJSONFile("{\"jsonVersion\":\"\"}", "../test/test_ldtk_level.ldtk");
+    importMapData();
+    struct levels* lvl_one;
+    lvl_one = getLevel("AutoLayer");
+    for (int i = 0; i < lvl_one->layers_data_ptr->autoTiles_data_ptr->count;
+         i++) {
+      tile_object = lvl_one->layers_data_ptr->autoTiles_data_ptr;
+      // addBackground(game_state);
+      // addWall(game_state, abs_tile_x, abs_tile_y, abs_tile_z);
+    }
+
+    // lvl_one->layers_data_ptr->autoTiles_data_ptr;
+
     for (u32 screen_index = 0; screen_index < 200; ++screen_index) {
 
       Assert(random_number_index < ArrayCount(random_number_table));
@@ -800,7 +809,6 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
           }
 
           if (tile_value == 2) {
-            addWall(game_state, abs_tile_x, abs_tile_y, abs_tile_z);
           }
         }
       }

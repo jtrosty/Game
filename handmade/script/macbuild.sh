@@ -24,7 +24,7 @@ SOURCE="../src/"
 EXTERNAL="../external"
 EXTERNAL_FULL="/Users/jonathantrost/code/projects/Game/handmade/build/ray_core.dylib"
 EXTERNAL_DIR="/Users/jonathantrost/code/libs/raylib_5/src/libraylib.a"
-INCLUDE_CLDTK="-I/Users/jonathantrost/code/libs/cLDtk"
+INCLUDE_CLDTK="-I/Users/jonathantrost/code/prjects/handmade/external"
 LIB_CLDTK="/Users/jonathantrost/code/libs/cLDtk/libcLDtk.a"
 
 
