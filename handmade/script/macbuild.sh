@@ -24,8 +24,6 @@ SOURCE="../src/"
 EXTERNAL="../external"
 EXTERNAL_FULL="/Users/jonathantrost/code/projects/Game/handmade/build/ray_core.dylib"
 EXTERNAL_DIR="/Users/jonathantrost/code/libs/raylib_5/src/libraylib.a"
-INCLUDE_CLDTK="-I/Users/jonathantrost/code/prjects/handmade/external"
-LIB_CLDTK="/Users/jonathantrost/code/libs/cLDtk/libcLDtk.a"
 
 
 
@@ -34,15 +32,19 @@ DEENA="deenawahba"
 if [ "$USER" == "$DEENA" ]
 then
     echo "Deena Wahba laptop"
+    PATH_START="/Users/deenawahba/"
     FULL_RAYLIB_SRC="/Users/deenawahba/Code/libs/raylib_5/src"
     LIBRAYLIB_PATH="/Users/deenawahba/Code/projects/Game/handmade/external"
     EXTERNAL_IN="/Users/deenawahba/Code/projects/Game/handmade/external/"
 else
     echo "jon Trost laptop"
+    PATH_START="/Users/jonathantrost/"
     FULL_RAYLIB_SRC="/Users/jonathantrost/code/libs/raylib_5/src"
     LIBRAYLIB_PATH="/Users/jonathantrost/Code/libs/raylib_5/src"
     EXTERNAL_IN="/Users/jonathantrost/code/projects/Game/handmade/external"
 fi
+LIB_CLDTK=$PATH_START"code/libs/cLDtk/libcLDtk.a"
+INCLUDE_CLDTK="-I$PATH_START/code/libs/cLDtk"
 
 RAYLIB_DEFINES="-D_DEFAULT_SOURCE -DPLATFORM_DESKTOP -DGRAPHICS_API_OPENGL_33"
 RAYLIB_C_FILES="$RAYLIB_SRC/rcore.c $RAYLIB_SRC/rshapes.c $RAYLIB_SRC/rtextures.c $RAYLIB_SRC/rtext.c $RAYLIB_SRC/rmodels.c $RAYLIB_SRC/utils.c $RAYLIB_SRC/raudio.c"
