@@ -1,6 +1,6 @@
 // #include "core_world.h"
 #if !defined(UNITY_BUILD_ERROR_REMOVER)
-#include "core.h"
+// #include "core.h"
 #endif
 
 #define TILE_CHUNK_SAFE_MARGIN (INT32_MAX / 64)
@@ -26,8 +26,10 @@ inline bool32 worldPosIsValid(World_Position p) {
 }
 
 inline bool32 isCanonical(World* world, real32 tile_rel) {
-  bool32 result = ((tile_rel >= -0.5f * world->chunk_side_in_meters) &&
-                   (tile_rel <= 0.5f * world->chunk_side_in_meters));
+  real32 epsilon = 0.00001f;
+  bool32 result =
+      ((tile_rel >= -(0.5f * world->chunk_side_in_meters + epsilon)) &&
+       (tile_rel <= 0.5f * world->chunk_side_in_meters + epsilon));
 
   return result;
 }
@@ -206,8 +208,8 @@ inline World_Difference worldSubtract(World* world, World_Position* a,
   real32 diff_tile_z = (real32)a->chunk_z - (real32)b->chunk_z;
 
   result.dXY =
-      world->tile_side_in_meters * diff_tile_xy + (a->offset - b->offset);
-  result.dz = world->tile_side_in_meters * diff_tile_z;
+      world->chunk_side_in_meters * diff_tile_xy + (a->offset - b->offset);
+  result.dz = world->chunk_side_in_meters * diff_tile_z;
 
   return result;
 }
@@ -215,7 +217,6 @@ inline World_Difference worldSubtract(World* world, World_Position* a,
 inline World_Position centeredChunkPoint(i32 chunk_x, i32 chunk_y,
                                          i32 chunk_z) {
   World_Position result = {};
-
   result.chunk_x = chunk_x;
   result.chunk_y = chunk_y;
   result.chunk_z = chunk_z;
@@ -250,8 +251,8 @@ inline void changeEntityLocationRaw(Memory_Arena* arena, World* world,
   } else {
     if (old_p) {
 
-      World_Chunk* chunk = getWorldChunk(world, new_p->chunk_x, new_p->chunk_y,
-                                         new_p->chunk_z, arena);
+      World_Chunk* chunk =
+          getWorldChunk(world, old_p->chunk_x, old_p->chunk_y, new_p->chunk_z);
       Assert(chunk);
 
       if (chunk) {

@@ -20,7 +20,6 @@ HANDMADE_WARNING_FLAGS="-Wno-deprecated-declarations -Wno-unused-function -Wno-u
 # Example with two source folders:
 # SOURCES="src/*.c src/submodule/*.c"
 SOURCES_PLATFORM="../src/ray/ray_platform.cpp"
-SOURCE="../src/"
 EXTERNAL="../external"
 EXTERNAL_FULL="/Users/jonathantrost/code/projects/Game/handmade/build/ray_core.dylib"
 EXTERNAL_DIR="/Users/jonathantrost/code/libs/raylib_5/src/libraylib.a"
@@ -33,12 +32,14 @@ if [ "$USER" == "$DEENA" ]
 then
     echo "Deena Wahba laptop"
     PATH_START="/Users/deenawahba/"
+    SOURCE="/Users/deenawahba/code/projects/Game/handmade/src"
     FULL_RAYLIB_SRC="/Users/deenawahba/Code/libs/raylib_5/src"
     LIBRAYLIB_PATH="/Users/deenawahba/Code/projects/Game/handmade/external"
-    EXTERNAL_IN="/Users/deenawahba/Code/projects/Game/handmade/external/"
+    EXTERNAL_IN="/Users/deenawahba/Code/projects/Game/handmade/external"
 else
     echo "jon Trost laptop"
     PATH_START="/Users/jonathantrost/"
+    SOURCE="/Users/jonathantrost/code/projects/Game/handmade/src"
     FULL_RAYLIB_SRC="/Users/jonathantrost/code/libs/raylib_5/src"
     LIBRAYLIB_PATH="/Users/jonathantrost/Code/libs/raylib_5/src"
     EXTERNAL_IN="/Users/jonathantrost/code/projects/Game/handmade/external"
@@ -61,6 +62,7 @@ STATIC_RAY_LIB_PATH="$RAYLIB_SRC/libraylib.a"
 
 #        TSODING stuff
 pwd
+echo "here"
 pushd build
 if test -f ray_platform; then
     rm ray_platform
@@ -77,7 +79,7 @@ pwd
 # Space Gray
 #clang++ -v -dynamiclib -o ray_core.dylib "$SOURCE/core.cpp" $MAC_LINK_FLAGS $RAYLIB_INCLUDE_FLAGS $HANDMADE_WARNING_FLAGS $COMPILATION_FLAGS -DEXTRA_ERRORS
 # Starlight
-clang++ -v -dynamiclib -o ray_core.dylib "$SOURCE/core.cpp" $MAC_LINK_FLAGS $RAYLIB_INCLUDE_FLAGS $LIB_CLDTK $INCLUDE_CLDTK $HANDMADE_WARNING_FLAGS $COMPILATION_FLAGS -DEXTRA_ERRORS
+clang++ -v -dynamiclib -o ray_core.dylib "$SOURCE/core.cpp" $LIB_CLDTK $INCLUDE_CLDTK $HANDMADE_WARNING_FLAGS $COMPILATION_FLAGS 
 clang++ -v -o ray_platform $SOURCES_PLATFORM  $LIBRAYLIB_PATH/libraylib.a -I $FULL_RAYLIB_SRC $COMPILATION_FLAGS $MAC_LINK_FLAGS $RAYLIB_INCLUDE_FLAGS $HANDMADE_WARNING_FLAGS #$RAYLIB_DEFINES 
 popd
 

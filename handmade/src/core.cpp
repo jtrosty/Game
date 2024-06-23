@@ -1,15 +1,23 @@
 // #include "sim_region.h"
-#include <utility>
+// #include "raylib.h"
+// #include "sim_region.h"
+// #include <utility>
 
+#include "sim_region.h"
 #define UNITY_BUILD_CLANGD_ERR_REMOVER
 
 #include "core.h"
 #include "core_entity.h"
 #include "core_random.h"
 
+#include "core_math.h"
+
 #include "core_world.cpp"
 
 #include "core_sim_region.cpp"
+
+// #define STB_IMAGE_IMPLEMENTATION
+// #include "../external/stb_image.h"
 
 extern "C" {
 #include "cLDtk.h"
@@ -87,9 +95,8 @@ struct Bitmap_Header {
 #pragma pack(pop)
 
 static Loaded_Bitmap
-
 DEBUG_loadBMP(debug_platform_read_entire_file* read_entire_file,
-              Thread_Context* thread, char* filename) {
+              Thread_Context* thread, const char* filename) {
 
   // BB GG RR AA, bottom up, start with bottomr row first
   Loaded_Bitmap result = {};
@@ -151,8 +158,90 @@ DEBUG_loadBMP(debug_platform_read_entire_file* read_entire_file,
   return result;
 }
 
-static void drawBitmap(Game_Offscreen_Buffer* buffer, Loaded_Bitmap* bitmap,
+static void drawSpriteFromBitmap(Game_Offscreen_Buffer* buffer,
+                                 Loaded_Bitmap* bitmap, real32 real_x,
+                                 real32 real_y, Rectangle2 sprite_rect,
+                                 i32 align_x = 0, i32 align_y = 0,
+                                 real32 cAlpha = 1.0f) {
+  real_x -= (real32)align_x;
+  real_y -= (real32)align_y;
 
+  i32 min_x = roundReal32ToInt32(real_x);
+  i32 min_y = roundReal32ToInt32(real_y);
+  i32 width_of_sprite =
+      roundReal32ToInt32(sprite_rect.max.x - sprite_rect.min.x);
+  i32 height_of_sprite =
+      roundReal32ToInt32(sprite_rect.max.y - sprite_rect.min.y);
+  i32 max_x = min_x + (real32)(width_of_sprite);
+  i32 max_y = min_y + (real32)(height_of_sprite);
+
+  // Adjust offester if spriteis off on top left corner partially offscreen
+  i32 source_offset_x = 0;
+  if (min_x < 0) {
+    source_offset_x = -min_x;
+    min_x = 0;
+  }
+  i32 source_offset_y = 0;
+  if (min_y < 0) {
+    source_offset_y = -min_y;
+    min_y = 0;
+  }
+  // Adjust max if sprite is off corner bottom right
+  if (max_x > buffer->width) {
+    // source_offset_x = max_x;
+    max_x = buffer->width;
+  }
+  if (max_y > buffer->height) {
+    // source_offset_y = max_y;
+    max_y = buffer->height;
+  }
+
+  // NOTE: the first address of pixels  at bitmap->pixels is the left side of
+  // the last row, so we need to go up to the data is loade backwards
+  u32* source_row = bitmap->pixels;
+  // u32* source_row = bitmap->pixels + bitmap->width * (bitmap->height - 1);
+
+  source_row += (bitmap->width * (roundReal32ToInt32(sprite_rect.min.y))) +
+                roundReal32ToInt32(sprite_rect.min.x);
+  // TODO: cleanup
+  // Work backwards in the y direction to where the sprite is first seen (if
+  // partially offscreen)
+  // source_row += (-source_offset_y * bitmap->width) + source_offset_x;
+
+  u8* dest_row = ((u8*)buffer->memory + min_x * buffer->bytes_per_pixel +
+                  min_y * buffer->pitch);
+
+  for (int y = min_y; y < max_y; ++y) {
+    u32* dest = (u32*)dest_row;
+    u32* source = source_row;
+
+    for (int x = min_x; x < max_x; ++x) {
+      real32 A = (real32)((*source >> 24) & 0xFF) / 255.0f;
+      A *= cAlpha;
+
+      real32 SR = (real32)((*source >> 0) & 0xFF);
+      real32 SG = (real32)((*source >> 8) & 0xFF);
+      real32 SB = (real32)((*source >> 16) & 0xFF);
+
+      real32 DR = (real32)((*dest >> 16) & 0xFF);
+      real32 DG = (real32)((*dest >> 8) & 0xFF);
+      real32 DB = (real32)((*dest >> 0) & 0xFF);
+
+      real32 R = (1.0f - A) * DR + (A * SR);
+      real32 G = (1.0f - A) * DG + (A * SG);
+      real32 B = (1.0f - A) * DB + (A * SB);
+
+      *dest = (((uint32)(R + 0.5f) << 16) | ((uint32)(G + 0.5f) << 8) |
+               ((uint32)(B + 0.5f) << 0));
+      ++dest;
+      ++source;
+    }
+    dest_row += buffer->pitch;
+    source_row += bitmap->width;
+  }
+}
+
+static void drawBitmap(Game_Offscreen_Buffer* buffer, Loaded_Bitmap* bitmap,
                        real32 real_x, real32 real_y, i32 align_x = 0,
                        i32 align_y = 0, real32 cAlpha = 1.0f) {
   real_x -= (real32)align_x;
@@ -269,13 +358,14 @@ inline v2 getCameraSpaceP(Game_State* game_state, Low_Entity* entity_low) {
 
 inline void pushPiece(Entity_Visible_Piece_Group* group, Loaded_Bitmap* bitmap,
                       v2 offset, real32 offset_z, v2 align, v2 dim, v4 color,
-                      real32 entity_z_c) {
+                      real32 entity_z_c, Rectangle2 sprite_rect,
+                      Render_Type type) {
   Assert(group->piece_count < ArrayCount(group->pieces));
   Entity_Visible_Piece* piece = group->pieces + group->piece_count++;
 
   piece->bitmap = bitmap;
   piece->offset =
-      group->game_state->meters_to_pixels * V2(offset.x, offset.y) - align;
+      group->game_state->meters_to_pixels * V2(offset.x, -offset.y) - align;
   piece->offset_z = group->game_state->meters_to_pixels * offset_z;
   piece->entity_z_c = entity_z_c;
   piece->r = color.r;
@@ -283,24 +373,37 @@ inline void pushPiece(Entity_Visible_Piece_Group* group, Loaded_Bitmap* bitmap,
   piece->b = color.b;
   piece->a = color.a;
   piece->dim = dim;
+  piece->render_type = type;
+  piece->sprite_rect = sprite_rect;
+}
+
+inline void pushBitmapSprite(Entity_Visible_Piece_Group* group,
+                             Loaded_Bitmap* bitmap, v2 offset, real32 offset_z,
+                             v2 align, Rectangle2 sprite_rect, v2 dim,
+                             real32 alpha = 1.0f, real32 entity_z_c = 1.0f) {
+  pushPiece(group, bitmap, offset, offset_z, align, dim,
+            V4(1.0f, 1.0f, 1.0f, alpha), entity_z_c, sprite_rect,
+            render_sprite_from_bitmap);
 }
 
 inline void pushBitmap(Entity_Visible_Piece_Group* group, Loaded_Bitmap* bitmap,
                        v2 offset, real32 offset_z, v2 align,
                        real32 alpha = 1.0f, real32 entity_z_c = 1.0f) {
   pushPiece(group, bitmap, offset, offset_z, align, V2(0, 0),
-            V4(1.0f, 1.0f, 1.0f, alpha), entity_z_c);
+            V4(1.0f, 1.0f, 1.0f, alpha), entity_z_c, {0}, render_bitmap);
 }
 
 inline void pushRect(Entity_Visible_Piece_Group* group, v2 offset,
                      real32 offset_z, v2 dim, v4 color,
                      real32 entity_z_c = 1.0f) {
-  pushPiece(group, 0, offset, offset_z, V2(0, 0), dim, color, entity_z_c);
+  // Rectangle2 zero_rect = {};
+  pushPiece(group, 0, offset, offset_z, V2(0, 0), dim, color, entity_z_c, {0},
+            render_color);
 }
 
 /*
-inline Entity entityFromHighIndex(Game_State* game_state, u32 high_entity_index)
-{ Entity result = {};
+inline Entity entityFromHighIndex(Game_State* game_state, u32
+high_entity_index) { Entity result = {};
 
     if (high_entity_index) {
         Assert(high_entity_index < ArrayCount(game_state->high_entities));
@@ -311,8 +414,9 @@ inline Entity entityFromHighIndex(Game_State* game_state, u32 high_entity_index)
     return result;
 }
 
-inline High_Entity* makeEntityHighFrequency(Game_State* game_state, Low_Entity*
-entity_low, u32 low_index, v2 camera_space_p) { High_Entity* entity_high = 0;
+inline High_Entity* makeEntityHighFrequency(Game_State* game_state,
+Low_Entity* entity_low, u32 low_index, v2 camera_space_p) { High_Entity*
+entity_high = 0;
 
   Assert(entity_low->high_entity_index == 0);
 
@@ -344,12 +448,13 @@ low_index) { High_Entity* entity_high = 0;
   Low_Entity *entity_low = game_state->low_entities + low_index;
 
     if(entity_low->high_entity_index) {
-        entity_high = game_state->high_entities + entity_low->high_entity_index;
+        entity_high = game_state->high_entities +
+entity_low->high_entity_index;
     }
     else {
         v2 camera_space_p = getCameraSpaceP(game_state, entity_low);
-        entity_high = makeEntityHighFrequency(game_state, entity_low, low_index,
-camera_space_p); } return entity_high;
+        entity_high = makeEntityHighFrequency(game_state, entity_low,
+low_index, camera_space_p); } return entity_high;
 }
 
 inline Entity forceEntityIntoHigh(Game_State *game_state, u32 low_index) {
@@ -413,13 +518,15 @@ high_entity_index);
 
 // Checks if entity has left the high freq area, moves to low feq if needed
 inline void offsetAndCheckFrequencyByArea(Game_State* game_state, v2 offset,
-Rectangle2 high_frequency_bounds) { for (u32 entitiy_index = 1; entitiy_index <
-game_state->high_entity_count; ) { High_Entity* high = game_state->high_entities
+Rectangle2 high_frequency_bounds) { for (u32 entitiy_index = 1; entitiy_index
+< game_state->high_entity_count; ) { High_Entity* high =
+game_state->high_entities
 + entitiy_index; Low_Entity* low = game_state->low_entities +
 high->low_entity_index;
 
         high->p += offset;
-        if (isInRectangle(high_frequency_bounds, high->p) && isValid(low->p)) {
+        if (isInRectangle(high_frequency_bounds, high->p) && isValid(low->p))
+{
             ++entitiy_index;
         }
         else {
@@ -439,7 +546,59 @@ struct Add_Low_Entity_Result {
 };
 
 static Add_Low_Entity_Result
+createLowEntitySprite(Game_State* game_state, Entity_Type type,
+                      World_Position p, Loaded_Bitmap* src_texture,
+                      Rectangle2 src_texture_rect, u8 flip) {
+  Assert(game_state->low_entity_count < ArrayCount(game_state->low_entities));
+  u32 entity_index = game_state->low_entity_count++;
+
+  Low_Entity* entity_low = game_state->low_entities + entity_index;
+  *entity_low = {};
+  entity_low->sim.type = type;
+  entity_low->p = nullPosition();
+
+  changeEntityLocation(&game_state->world_arena, game_state->world,
+                       entity_index, entity_low, p);
+
+  Add_Low_Entity_Result result;
+  result.low = entity_low;
+  result.low_index = entity_index;
+
+  // TODO(casey): Do we need to have a begin/end paradigm for adding
+  // entities so that they can be brought into the high set when they
+  // are added and are in the camera region?
+
+  return result;
+}
+
+static Add_Low_Entity_Result
 createLowEntity(Game_State* game_state, Entity_Type type, World_Position p) {
+  Assert(game_state->low_entity_count < ArrayCount(game_state->low_entities));
+  u32 entity_index = game_state->low_entity_count++;
+
+  Low_Entity* entity_low = game_state->low_entities + entity_index;
+  *entity_low = {};
+  entity_low->sim.type = type;
+  entity_low->p = nullPosition();
+
+  changeEntityLocation(&game_state->world_arena, game_state->world,
+                       entity_index, entity_low, p);
+
+  Add_Low_Entity_Result result;
+  result.low = entity_low;
+  result.low_index = entity_index;
+
+  // TODO(casey): Do we need to have a begin/end paradigm for adding
+  // entities so that they can be brought into the high set when they
+  // are added and are in the camera region?
+
+  return result;
+}
+
+static Add_Low_Entity_Result
+createLowEntitySprite(Game_State* game_state, Entity_Type type,
+                      World_Position p, u32 abs_tile_z, i8 flip,
+                      Rectangle2 bitmap_src, Loaded_Bitmap* src_bitmap) {
   Assert(game_state->low_entity_count < ArrayCount(game_state->low_entities));
   u32 entity_index = game_state->low_entity_count++;
 
@@ -473,6 +632,29 @@ static Add_Low_Entity_Result addWall(Game_State* game_state, u32 abs_tile_x,
   entity.low->sim.height = game_state->world->tile_side_in_meters;
   entity.low->sim.width = entity.low->sim.height;
   addFlag(&entity.low->sim, Entity_Flag_Collides);
+
+  return entity;
+}
+
+static Add_Low_Entity_Result
+addWallSprite(Game_State* game_state, u32 abs_tile_x, u32 abs_tile_y,
+              u32 abs_tile_z, i8 flip, Rectangle2 bitmap_src_rect,
+              Loaded_Bitmap* src_bitmap, Rectangle2 rect,
+              Sim_Entity_Flags entity_flag) {
+
+  World_Position p = chunkPositionFromTilePosition(
+      game_state->world, abs_tile_x, abs_tile_y, abs_tile_z);
+  Add_Low_Entity_Result entity =
+      createLowEntitySprite(game_state, entityType_Wall_Sprite, p, abs_tile_z,
+                            flip, bitmap_src_rect, src_bitmap);
+
+  entity.low->sim.height = game_state->world->tile_side_in_pixels;
+  entity.low->sim.width = entity.low->sim.height;
+  entity.low->sim.texture = src_bitmap;
+  entity.low->sim.sprite_rect = bitmap_src_rect;
+  entity.low->sim.flip = flip;
+
+  addFlag(&entity.low->sim, entity_flag);
 
   return entity;
 }
@@ -524,13 +706,14 @@ mapIntoChunkSpace(world, new_camera_p, getMaxCorner(camera_bounds));
     for (i32 chunk_y = min_chunk_p.chunk_y; chunk_y <= max_chunk_p.chunk_y;
 ++chunk_y) {
 
-        for (i32 chunk_x = min_chunk_p.chunk_x; chunk_x <= max_chunk_p.chunk_x;
+        for (i32 chunk_x = min_chunk_p.chunk_x; chunk_x <=
+max_chunk_p.chunk_x;
 ++chunk_x) {
 
             World_Chunk* chunk = getWorldChunk(world, chunk_x, chunk_y,
 new_camera_p.chunk_z); if (chunk) { for (World_Entity_Block* block =
-&chunk->first_block; block; block = block->next) { for (u32 entity_index_index =
-0; entity_index_index < block->entity_count; ++ entity_index_index) {
+&chunk->first_block; block; block = block->next) { for (u32 entity_index_index
+= 0; entity_index_index < block->entity_count; ++ entity_index_index) {
 
                         u32 low_entity_index =
 block->low_entity_index[entity_index_index]; if (low_entity_index ==
@@ -550,11 +733,11 @@ camera_space_p);
         }
     }
     Assert(validateEntityPairs(game_state));
-    // TODO: This needs to accelerated, checks every low entity if it is in area
-to make high freq i32 min_tile_x = new_camera_p.abs_tile_x - (tile_span_x / 2);
-    i32 max_tile_x = new_camera_p.abs_tile_x + (tile_span_x / 2);
-    i32 min_tile_y = new_camera_p.abs_tile_y - (tile_span_y / 2);
-    i32 max_tile_y = new_camera_p.abs_tile_y + (tile_span_y / 2);
+    // TODO: This needs to accelerated, checks every low entity if it is in
+area to make high freq i32 min_tile_x = new_camera_p.abs_tile_x - (tile_span_x
+/ 2); i32 max_tile_x = new_camera_p.abs_tile_x + (tile_span_x / 2); i32
+min_tile_y = new_camera_p.abs_tile_y - (tile_span_y / 2); i32 max_tile_y =
+new_camera_p.abs_tile_y + (tile_span_y / 2);
 
     for (u32 entity_index = 1; entity_index < game_state->low_entity_count;
 ++entity_index) { Low_Entity* low_entity = game_state->low_entities +
@@ -642,9 +825,9 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
                                      thread, "../test/tree00.bmp");
     game_state->rock = DEBUG_loadBMP(*memory->DEBUG_platformReadEntireFile,
                                      thread, "../test/rock03.bmp");
-    game_state->DEBUG_bitmap =
-        DEBUG_loadBMP(*memory->DEBUG_platformReadEntireFile, thread,
-                      "../test/deub_bitmap.bmp");
+    //    game_state->DEBUG_bitmap =
+    //      DEBUG_loadBMP(*memory->DEBUG_platformReadEntireFile, thread,
+    //                  "../test/deub_bitmap.bmp");
 
     Hero_Bitmaps* hero_bitmaps;
 
@@ -710,14 +893,15 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
                     memory->permanent_storage_size - sizeof(Game_State),
                     (u8*)memory->permanent_storage + sizeof(Game_State));
     game_state->world = pushStruct(&game_state->world_arena, World);
-    World* world = game_state->world;
-    initializeWorld(world, 1.4f);
+    World* world;
+    world = (World*)game_state->world;
+    initializeWorld(world, 1.0f);
 
     game_state->tone_hz = 512;
 
     game_state->player_speed_scaler = 10.0f;
 
-    world->tile_side_in_pixels = 60;
+    world->tile_side_in_pixels = 16;
     real32 meters_to_pixels =
         (real32)world->tile_side_in_pixels / (real32)world->tile_side_in_meters;
     game_state->meters_to_pixels = meters_to_pixels;
@@ -740,115 +924,167 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
     bool32 door_up = false;
     bool32 door_down = false;
 
-    loadJSONFile("{\"jsonVersion\":\"\"}", "../test/test_ldtk_level.ldtk");
+    loadJSONFile("{\"jsonVersion\":\"\"}", "../test/test_2d_platformer.ldtk");
+    // loadJSONFile("{\"jsonVersion\":\"\"}", "../test/debug_ldtk.ldtk");
     importMapData();
-    struct levels* lvl_one;
-    lvl_one = getLevel("AutoLayer");
-    for (int i = 0; i < lvl_one->layers_data_ptr->autoTiles_data_ptr->count;
-         i++) {
-      tile_object = lvl_one->layers_data_ptr->autoTiles_data_ptr;
-      // addBackground(game_state);
-      // addWall(game_state, abs_tile_x, abs_tile_y, abs_tile_z);
+    struct levels all_levels[1];
+    struct levels* lvl_2d_platformer = getLevel("Your_typical_2D_platformer");
+    all_levels[0] = *lvl_2d_platformer;
+
+    struct levels* lvl_top = getLevel("Top");
+    struct levels* lvl_bottom = getLevel("Bot");
+    struct levels* lvl_3 = getLevel("World_Level_3");
+
+    // unsigned char* data =
+
+    struct levels* lvl_debug = getLevel("Level_0");
+    /// struct layerInstances* debug_tiles = getLayer("Tiles", lvl_debug->uid);
+    Loaded_Bitmap level_bitmap_cpu = memory->platform_loadTextureCpu(
+        0, "test/SunnyLand_by_Ansimuz-extended.png");
+
+    Loaded_Bitmap debug_bit =
+        memory->platform_loadTextureCpu(0, "test/deub_bitmap.bmp");
+    game_state->DEBUG_bitmap = debug_bit;
+
+    unsigned char* data;
+    game_state->sprite_sheet_bg = level_bitmap_cpu;
+
+    int world_left_edge = 0;
+    int world_right_edge = 0;
+    int world_top_edge = 0;
+    int world_bottom_edge = 0;
+    for (int levels_index = 0; levels_index < sizeof(all_levels);
+         levels_index++) {
+
+      struct levels level = all_levels[levels_index];
+
+      if (levels_index == 0) {
+        world_left_edge = level.worldX;
+        world_right_edge = level.worldX + level.pxWid;
+        world_top_edge = level.worldY;
+        world_bottom_edge = level.worldX + level.pxHei;
+      }
+
+      if (world_left_edge > level.worldX) {
+        world_left_edge = level.worldX;
+      }
+      if (world_right_edge < (level.worldX + level.pxWid)) {
+        world_left_edge = level.worldX + level.pxWid;
+      }
+      if (world_top_edge < level.worldY) {
+        world_left_edge = level.worldY;
+      }
+      if (world_bottom_edge < (level.worldY + level.pxHei)) {
+        world_left_edge = level.worldX + level.pxHei;
+      }
+    }
+    int top_edge_to_zero = 0;
+    int left_edge_to_zero = 0;
+    if (world_left_edge < 0) {
+      left_edge_to_zero = -world_left_edge;
+    }
+    if (world_top_edge < 0) {
+      top_edge_to_zero = -world_top_edge;
     }
 
-    // lvl_one->layers_data_ptr->autoTiles_data_ptr;
+    for (int levels_index = 0; levels_index < 1; levels_index++) {
 
-    for (u32 screen_index = 0; screen_index < 200; ++screen_index) {
+      struct levels level = all_levels[levels_index];
+      struct layerInstances* lvl_entities = getLayer("entities", level.uid);
+      struct layerInstances* lvl_collisions = getLayer("Collisions", level.uid);
+      struct layerInstances* tileset = getLayer("tileset", level.uid);
+      struct layerInstances* lvl_background =
+          getLayer("Bg_textures", level.uid);
+      //      game_state->sprite_sheet_bg =
+      //          DEBUG_loadBMP(*memory->DEBUG_platformReadEntireFile,
+      //          thread,
+      //                        level.tilesets_data_ptr->relPath);
+      struct autoTiles* tiles = level.layers_data_ptr->autoTiles_data_ptr;
+      int* int_grid = level.layers_data_ptr->intGrid;
+      int world_x_adjusted = level.worldX + left_edge_to_zero;
+      int world_y_adjsuted = level.worldY + top_edge_to_zero;
+      int grid_size = level.layers_data_ptr->gridSize;
+      int j = 0;
+      for (int i = 0; i < lvl_background->autoTiles_data_ptr->count; i++, j++) {
+        struct autoTiles auto_tile = lvl_background->autoTiles_data_ptr[i];
+        u32 abs_tile_x =
+            (world_x_adjusted + auto_tile.x) / world->tile_side_in_pixels;
+        u32 abs_tile_y =
+            (world_y_adjsuted + auto_tile.y) / world->tile_side_in_pixels;
+        u32 abs_tile_z = 0;
+        i8 flip = auto_tile.f;
+        int texture_src_x = auto_tile.SRCx;
+        int texture_src_y = auto_tile.SRCy;
+        // int texture_src_x = 0;
+        // int texture_src_y = 0;
+        Loaded_Bitmap* src_texture = &game_state->sprite_sheet_bg;
+        Rectangle2 src_texture_rect = {
+            .min = V2(texture_src_x, texture_src_y),
+            .max = V2(texture_src_x + grid_size, texture_src_y + grid_size)};
+        Rectangle2 rect = {.min = V2(0, 0), .max = V2(grid_size, grid_size)};
+        int int_grid_value = lvl_collisions->intGrid[i];
+        Sim_Entity_Flags entity_flag = Entity_Flag_Background;
 
-      Assert(random_number_index < ArrayCount(random_number_table));
-      u32 random_choice;
-      { random_choice = random_number_table[random_number_index++] % 2; }
-
-      bool32 created_z_door = false;
-      if (random_choice == 2) {
-        created_z_door = true;
-        if (abs_tile_z == screen_base_z) {
-          door_up = true;
-        } else {
-          door_down = true;
-        }
-      } else if (random_choice == 1) {
-        door_right = true;
-      } else {
-        door_top = true;
+        addWallSprite(game_state, abs_tile_x, abs_tile_y, abs_tile_z, flip,
+                      src_texture_rect, src_texture, rect, entity_flag);
       }
+      for (int i = 0; i < lvl_collisions->autoTiles_data_ptr->count; i++, j++) {
+        struct autoTiles auto_tile = lvl_collisions->autoTiles_data_ptr[i];
+        u32 abs_tile_x =
+            (world_x_adjusted + auto_tile.x) / world->tile_side_in_pixels;
+        u32 abs_tile_y =
+            (world_y_adjsuted + auto_tile.y) / world->tile_side_in_pixels;
+        u32 abs_tile_z = 0;
+        i8 flip = auto_tile.f;
+        int texture_src_x = auto_tile.SRCx;
+        int texture_src_y = auto_tile.SRCy;
+        // int texture_src_x = 0;
+        // int texture_src_y = 0;
+        Loaded_Bitmap* src_texture = &game_state->sprite_sheet_bg;
+        Rectangle2 src_texture_rect = {
+            .min = V2(texture_src_x, texture_src_y),
+            .max = V2(texture_src_x + grid_size, texture_src_y + grid_size)};
+        Rectangle2 rect = {.min = V2(0, 0), .max = V2(grid_size, grid_size)};
+        int int_grid_value = lvl_collisions->intGrid[i];
+        Sim_Entity_Flags entity_flag = Entity_Flag_Collides;
 
-      for (u32 tile_y = 0; tile_y < tiles_per_height; ++tile_y) {
-
-        for (u32 tile_x = 0; tile_x < tiles_per_width; ++tile_x) {
-
-          u32 abs_tile_x = screen_x * tiles_per_width + tile_x;
-          u32 abs_tile_y = screen_y * tiles_per_height + tile_y;
-
-          uint32 tile_value = 1;
-          if ((tile_x == 0) &&
-              (!door_left || (tile_y != (tiles_per_height / 2)))) {
-            tile_value = 2;
-          }
-          if ((tile_x == (tiles_per_width - 1)) &&
-              (!door_right || (tile_y != (tiles_per_height / 2)))) {
-            tile_value = 2;
-          }
-          if ((tile_y == 0) &&
-              (!door_down || (tile_x != (tiles_per_width / 2)))) {
-            tile_value = 2;
-          }
-          if ((tile_y == (tiles_per_height - 1)) &&
-              (!door_top || (tile_x != (tiles_per_width / 2)))) {
-            tile_value = 2;
-          }
-
-          if ((tile_x == 10) && (tile_y == 6)) {
-            if (door_up) {
-              tile_value = 3;
-            }
-
-            if (door_down) {
-              tile_value = 4;
-            }
-          }
-
-          if (tile_value == 2) {
-          }
-        }
+        addWallSprite(game_state, abs_tile_x, abs_tile_y, abs_tile_z, flip,
+                      src_texture_rect, src_texture, rect, entity_flag);
       }
+      /*
+      for (int i = 0; i < debug_tiles->gridTiles_data_ptr->count; i++) {
+        struct gridTiles auto_tile = debug_tiles->gridTiles_data_ptr[i];
+        u32 abs_tile_x = (0 + auto_tile.x) / world->tile_side_in_pixels;
+        u32 abs_tile_y = (0 + auto_tile.y) / world->tile_side_in_pixels;
+        u32 abs_tile_z = 0;
+        i8 flip = auto_tile.f;
+        int texture_src_x = auto_tile.SRCx;
+        int texture_src_y = auto_tile.SRCy;
+        int grid_size = 16;
+        // int texture_src_x = 0;
+        // int texture_src_y = 0;
+        Loaded_Bitmap* src_texture = &game_state->sprite_sheet_bg;
+        Rectangle2 src_texture_rect = {
+            .min = V2(texture_src_x, texture_src_y),
+            .max = V2(texture_src_x + grid_size, texture_src_y + grid_size)};
+        Rectangle2 rect = {.min = V2(0, 0), .max = V2(grid_size, grid_size)};
 
-      door_left = door_right;
-      door_bottom = door_top;
-
-      if (created_z_door) {
-        door_down = !door_down;
-        door_up = !door_up;
-      } else {
-        door_up = false;
-        door_down = false;
+        addWallSprite(game_state, abs_tile_x, abs_tile_y, abs_tile_z, flip,
+                      src_texture_rect, src_texture, rect);
       }
-
-      door_right = false;
-      door_top = false;
-
-      if (random_choice == 2) {
-        if (abs_tile_z == screen_base_z) {
-          abs_tile_z = screen_base_z + 1;
-        } else {
-          abs_tile_z = screen_base_z;
-        }
-      } else if (random_choice == 1) {
-        screen_x += 1;
-      } else {
-        screen_y += 1;
-      }
+      */
     }
 
     World_Position new_camera_p = {};
-    u32 camera_tile_x = 19 / 2 + screen_base_x * tiles_per_width;
-    u32 camera_tile_y = 9 / 2 + screen_base_y * tiles_per_height;
+    u32 camera_tile_x = 19 / 2;
+    u32 camera_tile_y = 9 / 2;
     u32 camera_tile_z = screen_base_z;
     new_camera_p = chunkPositionFromTilePosition(world, camera_tile_x,
                                                  camera_tile_y, camera_tile_z);
     game_state->camera_pos = new_camera_p;
 
-    // TODO(casey): This may be more appropriate to do in the platform layer
+    // TODO(casey): This may be more appropriate to do in the platform
+    // layer
     memory->is_initialized = true;
   }
 
@@ -877,14 +1113,14 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
 
       if (controller->is_analog) {
         controlled_hero->ddp = v2{controller->left_stick_average_x,
-                                  -controller->left_stick_average_y};
+                                  controller->left_stick_average_y};
       } else {
         // NOTE(casey): Use digital movement tuning
         if (controller->move_up.ended_down) {
-          controlled_hero->ddp.y = 1.0f;
+          controlled_hero->ddp.y = -1.0f;
         }
         if (controller->move_down.ended_down) {
-          controlled_hero->ddp.y = -1.0f;
+          controlled_hero->ddp.y = 1.0f;
         }
         if (controller->move_left.ended_down) {
           controlled_hero->ddp.x = -1.0f;
@@ -896,12 +1132,12 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
     }
   }
 
-  //
-  //
-  //  Render
-  //
-  //
-  // THis is the old tilemap system
+//
+//
+//  Render
+//
+//
+// THis is the old tilemap system
 #if 0
 #endif
 
@@ -914,13 +1150,14 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
   real32 screen_center_x = 0.5f * (real32)buffer->width;
   real32 screen_center_y = 0.5f * (real32)buffer->height;
 
-  u32 tile_span_x = 25 * 3;
-  u32 tile_span_y = 15 * 3;
+  u32 tile_span_x = (buffer->width / 16) * 3;
+  u32 tile_span_y = (buffer->height / 16) * 3;
 
   Rectangle2 camera_bounds =
       rectCenterDim(V2(0, 0), world->tile_side_in_meters *
                                   V2((real32)tile_span_x, (real32)tile_span_y));
-  setCamera(game_state);
+  // TODO: ugh
+  // setCamera(game_state);
 
   Memory_Arena sim_arena;
   initializeArena(&sim_arena, memory->transient_storage_size,
@@ -980,9 +1217,16 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
       break;
     }
     case entityType_Wall: {
+      break;
       pushRect(&render_piece_group, V2(0, 0), 0,
                V2(entity->width, entity->height),
                V4(wall_red, wall_green, wall_blue, 0.0));
+      break;
+    }
+    case entityType_Wall_Sprite: {
+      pushBitmapSprite(&render_piece_group, &game_state->sprite_sheet_bg,
+                       V2(0, 0), 0.0, V2(0, 0), entity->sprite_rect,
+                       V2(entity->width, entity->height));
       break;
     }
     case entityType_Null: {
@@ -1003,7 +1247,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
     real32 entity_ground_point_x =
         screen_center_x + (game_state->meters_to_pixels * entity->p.x);
     real32 entity_ground_point_y =
-        screen_center_y - (game_state->meters_to_pixels * entity->p.y);
+        screen_center_y + (game_state->meters_to_pixels * entity->p.y);
     real32 entity_z = -game_state->meters_to_pixels * entity->z;
 
     for (u32 piece_index = 0; piece_index < render_piece_group.piece_count;
@@ -1011,12 +1255,28 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
       Entity_Visible_Piece* render_piece =
           render_piece_group.pieces + piece_index;
       v2 center = {entity_ground_point_x + render_piece->offset.x,
-                   entity_ground_point_y + render_piece->offset.y +
-                       render_piece->offset_z * entity_z};
+                   entity_ground_point_y + render_piece->offset.y};
 
       if (render_piece->bitmap) {
-        drawBitmap(buffer, render_piece->bitmap, center.x, center.y,
-                   render_piece->a);
+        switch (render_piece->render_type) {
+        case (render_bitmap): {
+          drawBitmap(buffer, render_piece->bitmap, center.x, center.y,
+                     render_piece->a);
+          break;
+        }
+        case (render_sprite_from_bitmap): {
+          if (entity->storage_index == 530) {
+
+            drawSpriteFromBitmap(buffer, render_piece->bitmap, center.x,
+                                 center.y, render_piece->sprite_rect);
+            drawRectangle(buffer, V2(0, 0), V2(20, 20), render_piece->r,
+                          render_piece->g, render_piece->b);
+          }
+          drawSpriteFromBitmap(buffer, render_piece->bitmap, center.x, center.y,
+                               render_piece->sprite_rect);
+          break;
+        }
+        }
       } else {
         v2 half_dim = 0.5f * game_state->meters_to_pixels * render_piece->dim;
         drawRectangle(buffer, center - half_dim, center + half_dim,
@@ -1028,6 +1288,13 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
   World_Difference world_difference =
       worldSubtract(sim_region->world, &world_origin, &sim_region->origin);
 
+  Rectangle2 debug_rect = Rectangle2{.min = V2(0, 0), .max = V2(256, 256)};
+
+  drawSpriteFromBitmap(buffer, &game_state->sprite_sheet_bg, 100, 100,
+                       debug_rect, 0.0, 0.0);
+
+  drawBitmap(buffer, &game_state->DEBUG_bitmap, 0, 0);
+  // drawBitmap(buffer, &game_state->sprite_sheet_bg, 100, 100);
   drawRectangle(buffer, world_difference.dXY, V2(10.0, 10.0f), 1.0f, 1.0f,
                 0.0f);
   endSim(game_state, sim_region);

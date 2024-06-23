@@ -1,7 +1,7 @@
-#include "sim_region.h"
 #if !defined(UNITY_BUILD_ERROR_REMOVER)
 #include "core.h"
 #endif
+#include "sim_region.h"
 
 static Sim_Entity_Hash* getHashFromStorageIndex(Sim_Region* sim_region,
                                                 u32 storage_index) {

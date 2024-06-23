@@ -7,7 +7,7 @@
 struct World_Entity_Block {
   u32 entity_count;
   u32 low_entity_index[16];
-  World_Entity_Block *next;
+  World_Entity_Block* next;
 };
 
 struct World_Difference {
@@ -22,7 +22,7 @@ struct World_Chunk {
 
   World_Entity_Block first_block;
 
-  World_Chunk *next_in_hash;
+  World_Chunk* next_in_hash;
 };
 
 struct World_Position {
@@ -40,9 +40,8 @@ struct World {
   i32 tile_side_in_pixels;
   real32 tile_side_in_meters;
   real32 chunk_side_in_meters;
-  ;
 
-  World_Entity_Block *first_free;
+  World_Entity_Block* first_free;
   /*
   u32 chunk_shift;
   u32 chunk_mask;

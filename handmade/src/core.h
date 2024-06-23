@@ -101,6 +101,14 @@ static void zeroSize(memory_index size, void* ptr) {
   }
 }
 
+struct Loaded_Bitmap {
+  u32* pixels;
+  i32 width;
+  i32 height;
+  u32 format;
+  u32 mipmaps;
+};
+
 #include "core_intrinsics.h"
 #include "core_math.h"
 #include "core_world.h"
@@ -113,17 +121,21 @@ typedef struct Debug_Read_File_Result {
   void* contents;
 } Debug_Read_File_Result;
 
+#define PLATFORM_LOAD_TEXTURE_CPU(name)                                        \
+  Loaded_Bitmap name(Thread_Context* thread, const char* path)
+typedef PLATFORM_LOAD_TEXTURE_CPU(platform_load_texture_cpu);
+
 #define DEBUG_PLATFORM_FREE_FILE_MEMORY(name)                                  \
   void name(Thread_Context* thread, void* memory)
 typedef DEBUG_PLATFORM_FREE_FILE_MEMORY(debug_platform_free_file_memory);
 
 #define DEBUG_PLATFORM_READ_ENTIRE_FILE(name)                                  \
-  Debug_Read_File_Result name(Thread_Context* Thread, char* filename)
+  Debug_Read_File_Result name(Thread_Context* Thread, const char* filename)
 typedef DEBUG_PLATFORM_READ_ENTIRE_FILE(debug_platform_read_entire_file);
 
 #define DEBUG_PLATFORM_WRITE_ENTIRE_FILE(name)                                 \
-  bool32 name(Thread_Context* thread, char* filename, uint32 memory_size,      \
-              void* memory)
+  bool32 name(Thread_Context* thread, const char* filename,                    \
+              uint32 memory_size, void* memory)
 typedef DEBUG_PLATFORM_WRITE_ENTIRE_FILE(debug_platform_write_entire_file);
 
 inline u32 safeTruncateU64(u64 value) {
@@ -219,6 +231,7 @@ struct Game_Memory {
   debug_platform_free_file_memory* DEBUG_platformFreeFileMemory;
   debug_platform_read_entire_file* DEBUG_platformReadEntireFile;
   debug_platform_write_entire_file* DEBUG_platformWriteEntireFile;
+  platform_load_texture_cpu* platform_loadTextureCpu;
 };
 
 #define GAME_UPDATE_AND_RENDER(name)                                           \
@@ -234,12 +247,6 @@ typedef GAME_UPDATE_AND_RENDER(game_update_and_render);
   void name(Thread_Context* thread, Game_Memory* memory,                       \
             Game_Sound_Output_Buffer* sound_buffer)
 typedef GAME_GET_SOUND_SAMPLES(game_get_sound_samples);
-
-struct Loaded_Bitmap {
-  u32* pixels;
-  i32 width;
-  i32 height;
-};
 
 struct Hero_Bitmaps {
   i32 align_x;
@@ -288,6 +295,7 @@ struct Game_State {
   Loaded_Bitmap shadow;
   Loaded_Bitmap tree;
   Loaded_Bitmap rock;
+  Loaded_Bitmap sprite_sheet_bg;
   Hero_Bitmaps hero_bitmap[4];
 
   // Player Stuff ----------------
@@ -306,8 +314,16 @@ struct Game_State {
   real32 t_sine;
 };
 
+enum Render_Type {
+  render_bitmap,
+  render_sprite_from_bitmap,
+  render_color,
+};
+
 struct Entity_Visible_Piece {
   Loaded_Bitmap* bitmap;
+  Render_Type render_type;
+  Rectangle2 sprite_rect;
   v2 offset;
   real32 offset_z;
   real32 entity_z_c;
@@ -318,7 +334,7 @@ struct Entity_Visible_Piece {
 struct Entity_Visible_Piece_Group {
   Game_State* game_state;
   u32 piece_count;
-  Entity_Visible_Piece pieces[64];
+  Entity_Visible_Piece pieces[256];
 };
 
 inline Low_Entity* getLowEntity(Game_State* game_state, u32 index) {

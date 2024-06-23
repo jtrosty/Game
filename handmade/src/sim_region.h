@@ -1,3 +1,5 @@
+// #include "core.h"
+// #include "core_math.h"
 #if !defined(CORE_SIM_REGION_H)
 
 // TODO delete this
@@ -29,6 +31,7 @@ enum Entity_Type {
 
   entityType_Hero,
   entityType_Wall,
+  entityType_Wall_Sprite,
   entityType_Familiar,
   entityType_Monster,
   entityType_Sword,
@@ -43,6 +46,7 @@ union Entity_Reference {
 enum Sim_Entity_Flags {
   Entity_Flag_Collides = (0 << 1),
   Entity_Flag_Nonspatial = (1 << 1),
+  Entity_Flag_Background = (1 << 2),
   Entity_Flag_Simming = (1 << 30),
 };
 
@@ -67,6 +71,10 @@ struct Sim_Entity {
   i32 d_abs_tile_z;
   u32 hit_points;
   Hit_Point hit_point[16];
+
+  Loaded_Bitmap* texture;
+  Rectangle2 sprite_rect;
+  u8 flip;
 
   Entity_Reference sword;
   real32 distance_remaining;

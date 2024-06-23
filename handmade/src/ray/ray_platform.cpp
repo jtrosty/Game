@@ -122,13 +122,57 @@ static int stringLength(char* string) {
   return count;
 }
 
-DEBUG_PLATFORM_FREE_FILE_MEMORY(debug_platformFreeFileMemory){InvalidCodePath}
+PLATFORM_LOAD_TEXTURE_CPU(platform_loadTextureCpu) {
+  // Prototype of macro void name(Thread_Context* thread, const char* path)
+  Loaded_Bitmap result = {0};
+
+  const char* start_of_path =
+      "/Users/jonathantrost/code/projects/Game/handmade/";
+  // const char* start_of_path =
+  // "/Users/jonathantrost/Documents/code/warfare/Game/handmade/";
+  const char* c = start_of_path;
+  u32 length_path_start = 0;
+  while (*c != '\0') {
+    c++;
+    length_path_start++;
+  }
+
+  const char* char_ptr = path;
+  u32 length_path = 0;
+  while (*char_ptr != '\0') {
+    char_ptr++;
+    length_path++;
+  }
+  u32 final_len = length_path_start + length_path;
+  char path_final[final_len + 1];
+  for (u32 i = 0; i < length_path_start; i++) {
+    path_final[i] = start_of_path[i];
+  }
+  for (u32 i = length_path_start; i < final_len; i++) {
+    path_final[i] = path[i - length_path_start];
+  }
+  path_final[final_len] = '\0';
+
+  Image loaded_image = LoadImage(path_final);
+
+  result.width = loaded_image.width;
+  result.pixels = (u32*)loaded_image.data;
+  result.height = loaded_image.height;
+  result.format = loaded_image.format;
+  result.mipmaps = loaded_image.mipmaps;
+
+  return result;
+}
+
+DEBUG_PLATFORM_FREE_FILE_MEMORY(debug_platformFreeFileMemory) {
+  InvalidCodePath;
+}
 
 DEBUG_PLATFORM_READ_ENTIRE_FILE(debug_platformReadEntireFile) {
 
-  char* start_of_path =
+  const char* start_of_path =
       "/Users/jonathantrost/Documents/code/warfare/Game/handmade/";
-  char* c = start_of_path;
+  const char* c = start_of_path;
   u32 length_path_start = 0;
   while (*c != '\0') {
     c++;
@@ -136,7 +180,7 @@ DEBUG_PLATFORM_READ_ENTIRE_FILE(debug_platformReadEntireFile) {
   }
 
   Debug_Read_File_Result result = {};
-  char* char_ptr = filename;
+  const char* char_ptr = filename;
   u32 length_path = 0;
   while (*char_ptr != '\0') {
     char_ptr++;
@@ -414,6 +458,7 @@ int main(int argv, char* argc[]) {
   game_memory.DEBUG_platformReadEntireFile = debug_platformReadEntireFile;
   game_memory.DEBUG_platformFreeFileMemory = debug_platformFreeFileMemory;
   game_memory.DEBUG_platformWriteEntireFile = debug_platformWriteEntireFile;
+  game_memory.platform_loadTextureCpu = platform_loadTextureCpu;
 
   // TODO is the size correct here
   ray_state.total_size =
